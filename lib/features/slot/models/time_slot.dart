@@ -1,12 +1,15 @@
+// lib/features/slot/models/time_slot.dart
 import 'package:flutter/material.dart';
 
 class TimeSlot {
   final String id;
+  final String slotId;
+  final String doctorId;
+  final DateTime date;
   final TimeOfDay startTime;
   final Duration duration;
   final int maxPatients;
   final int bookedPatients;
-  final List<String> appointmentIds;
   final bool isActive;
 
   bool get isFullyBooked => bookedPatients >= maxPatients;
@@ -52,64 +55,65 @@ class TimeSlot {
 
   const TimeSlot({
     required this.id,
+    required this.slotId,
+    required this.doctorId,
+    required this.date,
     required this.startTime,
     required this.duration,
     required this.maxPatients,
     this.bookedPatients = 0,
-    this.appointmentIds = const [],
     this.isActive = true,
   });
 
   TimeSlot copyWith({
     String? id,
+    String? slotId,
+    String? doctorId,
+    DateTime? date,
     TimeOfDay? startTime,
     Duration? duration,
     int? maxPatients,
     int? bookedPatients,
-    List<String>? appointmentIds,
     bool? isActive,
   }) {
     return TimeSlot(
       id: id ?? this.id,
+      slotId: slotId ?? this.slotId,
+      doctorId: doctorId ?? this.doctorId,
+      date: date ?? this.date,
       startTime: startTime ?? this.startTime,
       duration: duration ?? this.duration,
       maxPatients: maxPatients ?? this.maxPatients,
       bookedPatients: bookedPatients ?? this.bookedPatients,
-      appointmentIds: appointmentIds ?? this.appointmentIds,
       isActive: isActive ?? this.isActive,
     );
   }
 
-  TimeSlot bookAppointment(String appointmentId) {
+  TimeSlot incrementBookings() {
     if (isFullyBooked) throw Exception('Slot is fully booked');
     if (!isActive) throw Exception('Slot is not active');
 
-    return copyWith(
-      bookedPatients: bookedPatients + 1,
-      appointmentIds: [...appointmentIds, appointmentId],
-    );
+    return copyWith(bookedPatients: bookedPatients + 1);
   }
 
-  TimeSlot cancelAppointment(String appointmentId) {
-    if (!appointmentIds.contains(appointmentId)) {
-      throw Exception('Appointment not found in this slot');
+  TimeSlot decrementBookings() {
+    if (bookedPatients <= 0) {
+      throw Exception('No bookings to cancel');
     }
 
-    return copyWith(
-      bookedPatients: bookedPatients - 1,
-      appointmentIds:
-          appointmentIds.where((id) => id != appointmentId).toList(),
-    );
+    return copyWith(bookedPatients: bookedPatients - 1);
   }
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'slotId': slotId,
+      'doctorId': doctorId,
+      'date': date.toIso8601String(),
       'startTime': '${startTime.hour}:${startTime.minute}',
       'duration': duration.inMinutes,
       'maxPatients': maxPatients,
       'bookedPatients': bookedPatients,
-      'appointmentIds': appointmentIds,
       'isActive': isActive,
     };
   }
@@ -118,6 +122,9 @@ class TimeSlot {
     final timeComponents = (map['startTime'] as String).split(':');
     return TimeSlot(
       id: map['id'] as String,
+      slotId: map['slotId'] as String,
+      doctorId: map['doctorId'] as String,
+      date: DateTime.parse(map['date'] as String),
       startTime: TimeOfDay(
         hour: int.parse(timeComponents[0]),
         minute: int.parse(timeComponents[1]),
@@ -125,7 +132,6 @@ class TimeSlot {
       duration: Duration(minutes: map['duration'] as int),
       maxPatients: map['maxPatients'] as int,
       bookedPatients: map['bookedPatients'] as int,
-      appointmentIds: List<String>.from(map['appointmentIds'] as List),
       isActive: map['isActive'] as bool,
     );
   }

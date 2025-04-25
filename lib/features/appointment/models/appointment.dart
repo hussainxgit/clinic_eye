@@ -1,4 +1,4 @@
-// Update in lib/features/appointment/domain/entities/appointment.dart
+// lib/features/appointment/models/appointment.dart
 enum AppointmentStatus { scheduled, completed, cancelled }
 
 enum PaymentStatus { paid, unpaid }
@@ -6,12 +6,15 @@ enum PaymentStatus { paid, unpaid }
 class Appointment {
   final String id;
   final String patientId;
+  final String patientName;
+  final String doctorId;
+  final String doctorName;
+  final String slotId;
+  final String timeSlotId;
   final DateTime dateTime;
   final AppointmentStatus status;
   final PaymentStatus paymentStatus;
-  final String doctorId;
-  final String appointmentSlotId;
-  final String timeSlotId;
+  final String? paymentId;
   final String? notes;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -19,25 +22,31 @@ class Appointment {
   Appointment({
     required this.id,
     required this.patientId,
+    required this.patientName,
+    required this.doctorId,
+    required this.doctorName,
+    required this.slotId,
+    required this.timeSlotId,
     required this.dateTime,
     this.status = AppointmentStatus.scheduled,
     this.paymentStatus = PaymentStatus.unpaid,
-    required this.doctorId,
-    required this.appointmentSlotId,
+    this.paymentId,
     this.notes,
-    required this.timeSlotId,
     this.createdAt,
     this.updatedAt,
   });
 
   Appointment copyWith({
     String? patientId,
+    String? patientName,
+    String? doctorId,
+    String? doctorName,
+    String? slotId,
+    String? timeSlotId,
     DateTime? dateTime,
     AppointmentStatus? status,
     PaymentStatus? paymentStatus,
-    String? doctorId,
-    String? appointmentSlotId,
-    String? timeSlotId,
+    String? paymentId,
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -45,12 +54,15 @@ class Appointment {
     return Appointment(
       id: id,
       patientId: patientId ?? this.patientId,
+      patientName: patientName ?? this.patientName,
+      doctorId: doctorId ?? this.doctorId,
+      doctorName: doctorName ?? this.doctorName,
+      slotId: slotId ?? this.slotId,
+      timeSlotId: timeSlotId ?? this.timeSlotId,
       dateTime: dateTime ?? this.dateTime,
       status: status ?? this.status,
       paymentStatus: paymentStatus ?? this.paymentStatus,
-      doctorId: doctorId ?? this.doctorId,
-      appointmentSlotId: appointmentSlotId ?? this.appointmentSlotId,
-      timeSlotId: timeSlotId ?? this.timeSlotId,
+      paymentId: paymentId ?? this.paymentId,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -61,12 +73,15 @@ class Appointment {
     return {
       'id': id,
       'patientId': patientId,
+      'patientName': patientName,
+      'doctorId': doctorId,
+      'doctorName': doctorName,
+      'slotId': slotId,
+      'timeSlotId': timeSlotId,
       'dateTime': dateTime.toIso8601String(),
       'status': status.toString().split('.').last,
       'paymentStatus': paymentStatus.toString().split('.').last,
-      'doctorId': doctorId,
-      'appointmentSlotId': appointmentSlotId,
-      'timeSlotId': timeSlotId,
+      'paymentId': paymentId,
       'notes': notes,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
@@ -77,12 +92,15 @@ class Appointment {
     return Appointment(
       id: map['id'] ?? '',
       patientId: map['patientId'] ?? '',
+      patientName: map['patientName'] ?? '',
+      doctorId: map['doctorId'] ?? '',
+      doctorName: map['doctorName'] ?? '',
+      slotId: map['slotId'] ?? '',
+      timeSlotId: map['timeSlotId'] ?? '',
       dateTime: DateTime.parse(map['dateTime']),
       status: _parseStatus(map['status'] ?? 'scheduled'),
       paymentStatus: _parsePaymentStatus(map['paymentStatus'] ?? 'unpaid'),
-      doctorId: map['doctorId'] ?? '',
-      appointmentSlotId: map['appointmentSlotId'] ?? '',
-      timeSlotId: map['timeSlotId'] ?? '',
+      paymentId: map['paymentId'],
       notes: map['notes'],
       createdAt:
           map['createdAt'] != null ? DateTime.parse(map['createdAt']) : null,

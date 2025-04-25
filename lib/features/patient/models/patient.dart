@@ -1,4 +1,4 @@
-// lib/features/patient/domain/entities/patient.dart
+// lib/features/patient/models/patient.dart
 enum PatientGender { male, female }
 
 enum PatientStatus { active, inactive }
@@ -14,7 +14,6 @@ class Patient {
   final DateTime registeredAt;
   final PatientStatus status;
   final String? notes;
-  final List<String> appointmentIds;
   final String? avatarUrl;
 
   Patient({
@@ -28,7 +27,6 @@ class Patient {
     required this.registeredAt,
     this.status = PatientStatus.active,
     this.notes,
-    this.appointmentIds = const [],
     this.avatarUrl,
   });
 
@@ -42,7 +40,6 @@ class Patient {
     DateTime? registeredAt,
     PatientStatus? status,
     String? notes,
-    List<String>? appointmentIds,
     String? avatarUrl,
   }) {
     return Patient(
@@ -56,7 +53,6 @@ class Patient {
       registeredAt: registeredAt ?? this.registeredAt,
       status: status ?? this.status,
       notes: notes ?? this.notes,
-      appointmentIds: appointmentIds ?? this.appointmentIds,
       avatarUrl: avatarUrl ?? this.avatarUrl,
     );
   }
@@ -73,7 +69,6 @@ class Patient {
       'registeredAt': registeredAt.toIso8601String(),
       'status': status.toString().split('.').last,
       'notes': notes,
-      'appointmentIds': appointmentIds,
       'avatarUrl': avatarUrl,
     };
   }
@@ -97,11 +92,6 @@ class Patient {
               ? PatientStatus.inactive
               : PatientStatus.active,
       notes: map['notes'],
-      // Fix: Properly handle appointmentIds casting
-      appointmentIds:
-          map['appointmentIds'] != null
-              ? List<String>.from(map['appointmentIds'])
-              : [],
       avatarUrl: map['avatarUrl'],
     );
   }

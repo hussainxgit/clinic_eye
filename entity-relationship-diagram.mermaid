@@ -1,0 +1,102 @@
+erDiagram
+    DOCTOR {
+        string id PK
+        string name
+        string specialty
+        string phoneNumber
+        string email
+        string imageUrl
+        string bio
+        boolean isAvailable
+        map socialMedia
+        datetime createdAt
+    }
+    
+    PATIENT {
+        string id PK
+        string name
+        string phone
+        string email
+        string address
+        enum gender
+        datetime dateOfBirth
+        datetime registeredAt
+        enum status
+        string notes
+        string avatarUrl
+    }
+    
+    SLOT {
+        string id PK
+        string doctorId FK
+        date date
+        boolean isActive
+    }
+    
+    TIME_SLOT {
+        string id PK
+        string slotId FK
+        string doctorId FK
+        date date
+        time startTime
+        duration duration
+        int maxPatients
+        int bookedPatients
+        boolean isActive
+    }
+    
+    APPOINTMENT {
+        string id PK
+        string patientId FK
+        string patientName
+        string doctorId FK
+        string doctorName
+        string slotId FK
+        string timeSlotId FK
+        datetime dateTime
+        enum status
+        enum paymentStatus
+        string paymentId FK
+        string notes
+        datetime createdAt
+        datetime updatedAt
+    }
+    
+    PAYMENT {
+        string id PK
+        string appointmentId FK
+        string patientId FK
+        string doctorId FK
+        double amount
+        string currency
+        enum status
+        string paymentMethod
+        string invoiceId
+        string transactionId
+        string paymentLink
+        boolean linkSent
+        datetime createdAt
+        datetime completedAt
+        datetime lastUpdated
+        map metadata
+    }
+    
+    SMS_RECORD {
+        string id PK
+        string recipient
+        string message
+        string sender
+        string status
+        datetime createdAt
+        string messageId
+        map metadata
+    }
+    
+    DOCTOR ||--o{ SLOT : "has"
+    DOCTOR ||--o{ TIME_SLOT : "provides"
+    SLOT ||--o{ TIME_SLOT : "contains"
+    TIME_SLOT ||--o{ APPOINTMENT : "hosts"
+    PATIENT ||--o{ APPOINTMENT : "books"
+    DOCTOR ||--o{ APPOINTMENT : "serves"
+    APPOINTMENT ||--|| PAYMENT : "has"
+    PATIENT ||--o{ SMS_RECORD : "receives"

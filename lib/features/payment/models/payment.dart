@@ -1,4 +1,4 @@
-// models/payment_model.dart
+// lib/features/payment/models/payment.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum PaymentStatus { pending, successful, failed, refunded, cancelled }
@@ -104,9 +104,10 @@ class Payment {
       appointmentId: map['appointmentId'] ?? '',
       patientId: map['patientId'] ?? '',
       doctorId: map['doctorId'] ?? '',
-      amount: (map['amount'] is int)
-          ? (map['amount'] as int).toDouble()
-          : (map['amount'] as double? ?? 0.0),
+      amount:
+          (map['amount'] is int)
+              ? (map['amount'] as int).toDouble()
+              : (map['amount'] as double? ?? 0.0),
       currency: map['currency'] ?? 'KWD',
       status: _parseStatus(map['status'] ?? 'pending'),
       paymentMethod: map['paymentMethod'] ?? 'online',
@@ -138,13 +139,13 @@ class Payment {
 
   static DateTime? _parseDateTime(dynamic value) {
     if (value == null) return null;
-    
+
     if (value is Timestamp) {
       return value.toDate();
     } else if (value is String) {
       return DateTime.parse(value);
     }
-    
+
     return null;
   }
 }
