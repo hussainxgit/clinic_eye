@@ -1,4 +1,4 @@
-import 'package:clinic_eye/features/payment/models/payment.dart';
+import 'package:clinic_eye/features/payment/model/payment.dart';
 
 class PaymentResponse {
   final bool success;

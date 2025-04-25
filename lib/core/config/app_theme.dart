@@ -145,7 +145,7 @@ class AppTheme {
       ),
       navigationRailTheme: const NavigationRailThemeData(
         backgroundColor: Color(0xFF1E1E1E),
-        selectedIconTheme: IconThemeData(color: Color(0xFF3498DB)),
+        selectedIconTheme: IconThemeData(color: Colors.white70),
         unselectedIconTheme: IconThemeData(color: Colors.white70),
         selectedLabelTextStyle: TextStyle(
           color: Color(0xFF3498DB),

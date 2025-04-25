@@ -4,8 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import '../config/payment_config.dart';
-import '../../patient/models/patient.dart';
-import '../models/payment.dart';
+import '../../patient/model/patient.dart';
+import '../model/payment.dart';
 import '../../../core/services/firebase/firebase_service.dart';
 import '../../messaging/services/sms_service.dart';
 

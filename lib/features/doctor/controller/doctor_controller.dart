@@ -1,5 +1,5 @@
 // controllers/doctor_controller.dart
-import 'package:clinic_eye/features/doctor/models/doctor.dart';
+import 'package:clinic_eye/features/doctor/model/doctor.dart';
 
 import '../../../core/services/firebase/firebase_service.dart';
 

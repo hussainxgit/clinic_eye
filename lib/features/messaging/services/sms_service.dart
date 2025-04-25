@@ -1,10 +1,10 @@
 // services/messaging/sms_service.dart
 import 'dart:convert';
-import 'package:clinic_eye/features/messaging/models/sms_record.dart';
+import 'package:clinic_eye/features/messaging/model/sms_record.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
-import '../models/sms_message.dart';
-import '../models/sms_response.dart';
+import '../model/sms_message.dart';
+import '../model/sms_response.dart';
 import '../../../core/services/firebase/firebase_service.dart';
 import '../config/sms_config.dart';
 
