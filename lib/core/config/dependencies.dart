@@ -34,13 +34,13 @@ final doctorControllerProvider = Provider<DoctorController>((ref) {
   return DoctorController(firebaseService);
 });
 
-// Initialize dependencies
+// Function to initialize providers at app startup
 Future<void> setupDependencies(FirebaseService firebaseService) async {
-  // Override providers with actual implementations
-  final container = ProviderContainer(
+  // This function will be called from main() to override the providers with actual instances
+  container = ProviderContainer(
     overrides: [firebaseServiceProvider.overrideWithValue(firebaseService)],
   );
-
-  // Pre-initialize any services that need early setup
-  await container.read(firebaseServiceProvider).auth.authStateChanges().first;
 }
+
+// Global provider container to be used in main.dart
+late ProviderContainer container;

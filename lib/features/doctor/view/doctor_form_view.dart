@@ -71,7 +71,6 @@ class AddDoctorForm extends ConsumerWidget {
                         context,
                       ).showSnackBar(SnackBar(content: Text('Error: $error')));
                     });
-
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Doctor added successfully!')),
                 );

@@ -4,18 +4,37 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/config/app_theme.dart';
 import 'core/config/dependencies.dart';
+import 'core/services/firebase/firebase_service.dart';
 import 'features/dashboard/view/dashboard_screen.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Load environment variables
-  await dotenv.load();
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    print('Failed to load .env.development file: $e');
+  }
+  // Initialize Firebase
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    // Initialize dependencies
+    final firebaseService = FirebaseService();
+    await setupDependencies(firebaseService);
+  } catch (e) {
+    print('Failed to initialize Firebase: $e');
+  }
 
-  // Initialize Firebase services
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  
-  runApp(const ProviderScope(child: MyApp()));
+  // Use ProviderScope with overrides from the container
+  runApp(
+    ProviderScope(
+      overrides: [firebaseServiceProvider.overrideWithValue(FirebaseService())],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends ConsumerStatefulWidget {
