@@ -1,6 +1,7 @@
 // controllers/doctor_controller.dart
 import 'package:clinic_eye/features/doctor/model/doctor.dart';
 
+import '../../../core/models/result.dart';
 import '../../../core/services/firebase/firebase_service.dart';
 
 class DoctorController {
@@ -9,13 +10,22 @@ class DoctorController {
   DoctorController(this._firebaseService);
 
   // Get all doctors
-  Future<List<Doctor>> getAllDoctors() async {
-    final snapshot = await _firebaseService.getCollection('doctors');
-    return snapshot.docs
-        .map(
-          (doc) => Doctor.fromMap(doc.data() as Map<String, dynamic>, doc.id),
-        )
-        .toList();
+  Future<Result<List<Doctor>>> getAllDoctors() async {
+    print('Fetching all doctors from Firebase'); // Debug log
+
+    try {
+      final snapshot = await _firebaseService.queryCollection('doctors', []);
+      final doctors =
+          snapshot.docs
+              .map(
+                (doc) =>
+                    Doctor.fromMap(doc.data() as Map<String, dynamic>, doc.id),
+              )
+              .toList();
+      return Result.success(doctors);
+    } catch (e) {
+      return Result.error(e.toString());
+    }
   }
 
   // Get available doctors
@@ -39,17 +49,23 @@ class DoctorController {
   }
 
   // Add new doctor
-  Future<Doctor> addDoctor(Doctor doctor) async {
-    // Validate business rules
-    await _validateDoctor(doctor);
+  Future<Result<Doctor>> addDoctor(Doctor doctor) async {
+    try {
+      // Validate doctor data
+      await _validateDoctor(doctor);
 
-    // Create doctor document
-    final docRef = await _firebaseService.addDocument(
-      'doctors',
-      doctor.toMap(),
-    );
+      // Add document to Firestore
+      final docRef = await _firebaseService.addDocument(
+        'doctors',
+        doctor.toMap(),
+      );
 
-    return doctor.copyWith(id: docRef.id);
+      // Return success result with the new doctor
+      return Result.success(doctor.copyWith(id: docRef.id));
+    } catch (e) {
+      // Handle error and return failure result
+      return Result.error(e.toString());
+    }
   }
 
   // Update doctor
@@ -122,19 +138,24 @@ class DoctorController {
   }
 
   // Search doctors by name
-  Future<List<Doctor>> searchDoctors(String query) async {
-    if (query.isEmpty) return getAllDoctors();
+  Future<Result<List<Doctor>>> searchDoctors(String query) async {
+    try {
+      final snapshot = await _firebaseService.queryCollection('doctors', [
+        QueryFilter(field: 'name', isEqualTo: query),
+      ]);
 
-    final allDoctors = await getAllDoctors();
-    final searchLower = query.toLowerCase();
+      final doctors =
+          snapshot.docs
+              .map(
+                (doc) =>
+                    Doctor.fromMap(doc.data() as Map<String, dynamic>, doc.id),
+              )
+              .toList();
 
-    return allDoctors
-        .where(
-          (doctor) =>
-              doctor.name.toLowerCase().contains(searchLower) ||
-              doctor.specialty.toLowerCase().contains(searchLower),
-        )
-        .toList();
+      return Result.success(doctors);
+    } catch (e) {
+      return Result.error(e.toString());
+    }
   }
 
   // Private helper methods

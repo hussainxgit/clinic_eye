@@ -95,7 +95,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             },
           ),
           // Main content area
-          Expanded(child: _buildContentArea(selectedIndex)),
+          Expanded(
+            child: Navigator(
+              key: const ValueKey('mainContent'),
+              onGenerateRoute: (RouteSettings settings) {
+                return MaterialPageRoute(
+                  builder: (context) => _buildContentArea(selectedIndex),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );

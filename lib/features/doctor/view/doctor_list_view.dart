@@ -1,12 +1,53 @@
+import 'package:clinic_eye/features/doctor/view/doctor_form_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../provider/doctor_provider.dart';
 
-class DoctorListView extends StatelessWidget {
+class DoctorListView extends ConsumerWidget {
   const DoctorListView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final doctorsAsync = ref.watch(getAllDoctorsProvider);
+    return switch (doctorsAsync) {
+      AsyncData(:final value) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DoctorsListViewHeader(listCounter: value.data!.length),
+          Divider(),
+          ListView.builder(
+            shrinkWrap: true,
+            itemCount: value.data!.length,
+            itemBuilder: (context, index) {
+              final doctor = value.data![index];
+              return Card(
+                child: ListTile(
+                  onTap: () => {},
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  title: Text(doctor.name),
+                  subtitle: Text('Specialty: ${doctor.specialty}'),
+                  trailing: Icon(Icons.arrow_forward),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      AsyncError(:final error) => Text('error: $error'),
+      _ => const Text('loading'),
+    };
+  }
+}
+
+class DoctorsListViewHeader extends StatelessWidget {
+  final int listCounter;
+  const DoctorsListViewHeader({super.key, required this.listCounter});
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -18,14 +59,25 @@ class DoctorListView extends StatelessWidget {
                   'Doctors List',
                   style: Theme.of(context).textTheme.headlineLarge,
                 ),
-                Text('(7)', style: Theme.of(context).textTheme.headlineLarge),
+                Text(
+                  '($listCounter)',
+                  style: Theme.of(context).textTheme.headlineLarge,
+                ),
               ],
             ),
             Row(
               spacing: 8.0,
               children: [
                 ElevatedButton(
-                  onPressed: () => {},
+                  onPressed:
+                      () => {
+                        // Navigate to add doctor screen
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const AddDoctorFormView(),
+                          ),
+                        ),
+                      },
                   child: const Text('Add Doctor'),
                 ),
                 ElevatedButton(
@@ -35,20 +87,6 @@ class DoctorListView extends StatelessWidget {
               ],
             ),
           ],
-        ),
-        Divider(),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: 7,
-          itemBuilder: (context, index) {
-            return ListTile(
-              onTap: () => {},
-              title: Text('Doctor ${index + 1}'),
-              subtitle: Text('Specialization ${index + 1}'),
-              trailing: Icon(Icons.arrow_forward),
-            );
-          },
         ),
       ],
     );
