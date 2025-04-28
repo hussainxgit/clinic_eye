@@ -55,7 +55,7 @@ class Doctor {
   // In your doctor repository implementation or doctor entity mapping
   factory Doctor.fromMap(Map<String, dynamic> map, String id) {
     return Doctor(
-      id: map['id'],
+      id: id,
       name: map['name'] ?? '', // Add null check
       specialty: map['specialty'] ?? '', // Add null check
       phoneNumber: map['phoneNumber'] ?? '', // Add null check

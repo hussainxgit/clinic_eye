@@ -22,7 +22,14 @@ class DoctorListView extends ConsumerWidget {
               final doctor = value.data![index];
               return Card(
                 child: ListTile(
-                  onTap: () => {},
+                  onTap: () => {
+                    // Navigate to doctor details screen
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => EditDoctorFormView(doctor: doctor),
+                      ),
+                    ),
+                  },
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8.0),
                   ),

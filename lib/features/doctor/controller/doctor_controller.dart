@@ -69,20 +69,24 @@ class DoctorController {
   }
 
   // Update doctor
-  Future<Doctor> updateDoctor(Doctor doctor) async {
-    // Check if doctor exists
-    final existing = await getDoctorById(doctor.id);
-    if (existing == null) {
-      throw Exception('Doctor not found');
+  Future<Result<Doctor>> updateDoctor(Doctor doctor) async {
+    try {
+      // Validate doctor data
+      await _validateDoctor(doctor, isUpdate: true);
+
+      // Update document in Firestore
+      await _firebaseService.updateDocument(
+        'doctors',
+        doctor.id,
+        doctor.toMap(),
+      );
+
+      // Return success result with the updated doctor
+      return Result.success(doctor);
+    } catch (e) {
+      // Handle error and return failure result
+      return Result.error(e.toString());
     }
-
-    // Validate doctor data
-    await _validateDoctor(doctor, isUpdate: true);
-
-    // Update document
-    await _firebaseService.updateDocument('doctors', doctor.id, doctor.toMap());
-
-    return doctor;
   }
 
   // Delete doctor

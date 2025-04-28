@@ -22,9 +22,34 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _isExtended = true;
 
+  // Navigator keys for each section
+  final List<GlobalKey<NavigatorState>> _navigatorKeys = [
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+  ];
+
+  final PageController _pageController = PageController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedIndex = ref.watch(selectedNavIndexProvider);
+
+    // Sync page controller with selected index
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_pageController.hasClients &&
+          _pageController.page?.round() != selectedIndex) {
+        _pageController.jumpToPage(selectedIndex);
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -42,26 +67,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             extended: _isExtended,
             minExtendedWidth: 200,
             labelType: NavigationRailLabelType.none,
-            leading:
-                _isExtended
-                    ? IconButton(
-                      icon: const Icon(Icons.menu_open),
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      onPressed: () {
-                        setState(() {
-                          _isExtended = !_isExtended;
-                        });
-                      },
-                    )
-                    : IconButton(
-                      icon: const Icon(Icons.menu),
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      onPressed: () {
-                        setState(() {
-                          _isExtended = !_isExtended;
-                        });
-                      },
-                    ),
+            leading: IconButton(
+              icon: Icon(_isExtended ? Icons.menu_open : Icons.menu),
+              color: Theme.of(context).colorScheme.onPrimary,
+              onPressed: () => setState(() => _isExtended = !_isExtended),
+            ),
             destinations: const [
               NavigationRailDestination(
                 icon: Icon(Icons.people_outline),
@@ -90,19 +100,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             ],
             selectedIndex: selectedIndex,
-            onDestinationSelected: (int index) {
+            onDestinationSelected: (index) {
               ref.read(selectedNavIndexProvider.notifier).state = index;
             },
           ),
-          // Main content area
+          // Main content with PageView and nested Navigator for each page
           Expanded(
-            child: Navigator(
-              key: const ValueKey('mainContent'),
-              onGenerateRoute: (RouteSettings settings) {
-                return MaterialPageRoute(
-                  builder: (context) => _buildContentArea(selectedIndex),
-                );
-              },
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: PageView(
+                key: ValueKey<int>(selectedIndex),
+                controller: _pageController,                
+                scrollDirection: Axis.vertical,
+                onPageChanged: (index) {
+                  ref.read(selectedNavIndexProvider.notifier).state = index;
+                },
+                children: List.generate(5, (index) => _buildNavigator(index)),
+              ),
             ),
           ),
         ],
@@ -110,18 +124,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildContentArea(int selectedIndex) {
-    final List<Widget> pages = [
-      const DoctorsScreen(),
-      const PatientListScreen(),
-      const Center(child: Text('Appointments', style: TextStyle(fontSize: 24))),
-      const Center(child: Text('Payments', style: TextStyle(fontSize: 24))),
-      const Center(child: Text('Messages', style: TextStyle(fontSize: 24))),
-    ];
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      child: pages[selectedIndex],
+  Widget _buildNavigator(int index) {
+    return Navigator(
+      key: _navigatorKeys[index],
+      onGenerateRoute: (settings) {
+        if (settings.name == '/') {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (context) => _getScreen(index),
+          );
+        }
+        return null;
+      },
     );
+  }
+
+  Widget _getScreen(int index) {
+    switch (index) {
+      case 0:
+        return const DoctorsScreen();
+      case 1:
+        return const PatientListScreen();
+      case 2:
+        return const Center(
+          child: Text('Appointments', style: TextStyle(fontSize: 24)),
+        );
+      case 3:
+        return const Center(
+          child: Text('Payments', style: TextStyle(fontSize: 24)),
+        );
+      case 4:
+        return const Center(
+          child: Text('Messages', style: TextStyle(fontSize: 24)),
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 }
