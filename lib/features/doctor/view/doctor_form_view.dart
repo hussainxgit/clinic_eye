@@ -60,7 +60,7 @@ class AddDoctorFormView extends ConsumerWidget {
                     if (!context.mounted) return; // Guard with mounted check
                     if (result.isSuccess) {
                       // Success handling
-                      ref.refresh(
+                      ref.invalidate(
                         getAllDoctorsProvider,
                       ); // Refresh the doctors list
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -152,7 +152,7 @@ class EditDoctorFormView extends ConsumerWidget {
                     if (!context.mounted) return; // Guard with mounted check
                     if (result.isSuccess) {
                       // Success handling
-                      ref.refresh(
+                      ref.invalidate(
                         getAllDoctorsProvider,
                       ); // Refresh the doctors list
                       ScaffoldMessenger.of(context).showSnackBar(

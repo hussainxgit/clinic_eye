@@ -7,6 +7,6 @@ class DoctorsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DoctorListView();
+    return DoctorListWithFilter();
   }
 }
