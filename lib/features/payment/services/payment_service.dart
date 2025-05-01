@@ -143,7 +143,7 @@ class PaymentService {
       throw Exception('Patient not found');
     }
 
-    final patient = Patient.fromMap(patientDoc.data()!);
+    final patient = Patient.fromMap(patientDoc.data()!, patientDoc.id);
 
     final appointmentDoc =
         await _firebaseService.firestore

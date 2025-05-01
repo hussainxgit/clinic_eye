@@ -1,7 +1,7 @@
+import 'package:clinic_eye/features/patient/view/patient_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../doctor/view/doctors_screen.dart';
-import '../../patient/view/patient_list_screen.dart';
 
 // Provider for selected navigation index
 final selectedNavIndexProvider = StateProvider<int>((ref) => 0);
@@ -35,7 +35,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   // Screens to display in the dashboard
   final List<Widget> _screens = [
     const DoctorsScreen(),
-    const PatientListScreen(),
+    const PatientsScreen(),
     const Center(child: Text('Appointments', style: TextStyle(fontSize: 24))),
     const Center(child: Text('Payments', style: TextStyle(fontSize: 24))),
     const Center(child: Text('Messages', style: TextStyle(fontSize: 24))),

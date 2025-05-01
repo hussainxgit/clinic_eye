@@ -31,6 +31,7 @@ class Patient {
   });
 
   Patient copyWith({
+    String? id,
     String? name,
     String? phone,
     String? email,
@@ -43,7 +44,7 @@ class Patient {
     String? avatarUrl,
   }) {
     return Patient(
-      id: id,
+      id: id ?? this.id,
       name: name ?? this.name,
       phone: phone ?? this.phone,
       email: email ?? this.email,
@@ -73,9 +74,9 @@ class Patient {
     };
   }
 
-  factory Patient.fromMap(Map<String, dynamic> map) {
+  factory Patient.fromMap(Map<String, dynamic> map, String id) {
     return Patient(
-      id: map['id'] ?? '',
+      id: id,
       name: map['name'] ?? '',
       phone: map['phone'] ?? '',
       email: map['email'],
