@@ -88,9 +88,9 @@ class Appointment {
     };
   }
 
-  factory Appointment.fromMap(Map<String, dynamic> map) {
+  factory Appointment.fromMap(Map<String, dynamic> map, String id) {
     return Appointment(
-      id: map['id'] ?? '',
+      id: id,
       patientId: map['patientId'] ?? '',
       patientName: map['patientName'] ?? '',
       doctorId: map['doctorId'] ?? '',

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/appointment/controller/appointment_controller.dart';
 import '../../features/patient/controller/patient_controller.dart';
 import '../services/firebase/firebase_service.dart';
 import '../../features/doctor/controller/doctor_controller.dart';
@@ -39,6 +40,12 @@ final patientControllerProvider = Provider<PatientController>((ref) {
   final firebaseService = ref.watch(firebaseServiceProvider);
   return PatientController(firebaseService);
 });
+
+final appointmentControllerProvider = Provider<AppointmentController>((ref) {
+  final firebaseService = ref.watch(firebaseServiceProvider);
+  return AppointmentController(firebaseService);
+});
+
 // Function to initialize providers at app startup
 Future<void> setupDependencies(FirebaseService firebaseService) async {
   // This function will be called from main() to override the providers with actual instances

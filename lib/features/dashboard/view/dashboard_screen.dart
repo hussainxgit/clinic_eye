@@ -1,6 +1,7 @@
 import 'package:clinic_eye/features/patient/view/patient_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../appointment/view/appointments_screen.dart';
 import '../../doctor/view/doctors_screen.dart';
 
 // Provider for selected navigation index
@@ -36,7 +37,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final List<Widget> _screens = [
     const DoctorsScreen(),
     const PatientsScreen(),
-    const Center(child: Text('Appointments', style: TextStyle(fontSize: 24))),
+    const AppointmentsScreen(),
     const Center(child: Text('Payments', style: TextStyle(fontSize: 24))),
     const Center(child: Text('Messages', style: TextStyle(fontSize: 24))),
   ];
