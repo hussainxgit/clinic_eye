@@ -378,6 +378,7 @@ class DoctorAppointmentsCalendar extends ConsumerWidget {
             doctorAppointmentsAsyncValue.when(
               data: (result) {
                 if (!result.isSuccess) {
+                  print(result.errorMessage);
                   return Text('Error: ${result.errorMessage}');
                 }
 

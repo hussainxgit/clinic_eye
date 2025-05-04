@@ -1,8 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../../../core/models/result.dart';
 import '../../../core/services/firebase/firebase_service.dart';
-import '../../payment/model/payment.dart';
 import '../../payment/services/payment_service.dart';
 import '../../slot/model/time_slot.dart';
 import '../model/appointment.dart';
@@ -14,24 +11,18 @@ class AppointmentController {
   AppointmentController(this._firebaseService)
     : _paymentService = PaymentService(_firebaseService);
 
-  // Get all appointments
+  // Get all appointments - uses index on dateTime
   Future<Result<List<Appointment>>> getAllAppointments() async {
     try {
-      final snapshot = await _firebaseService.queryCollection(
-        'appointments',
-        [],
-        orderBy: 'dateTime',
-        descending: true,
-      );
+      final snapshot =
+          await _firebaseService.firestore
+              .collection('appointments')
+              .orderBy('dateTime', descending: true)
+              .get();
 
       final appointments =
           snapshot.docs
-              .map(
-                (doc) => Appointment.fromMap(
-                  doc.data() as Map<String, dynamic>,
-                  doc.id,
-                ),
-              )
+              .map((doc) => Appointment.fromMap(doc.data(), doc.id))
               .toList();
 
       return Result.success(appointments);
@@ -40,29 +31,30 @@ class AppointmentController {
     }
   }
 
-  // Get appointment by ID
+  // Get appointment by ID - no index needed for document lookup
   Future<Result<Appointment>> getAppointmentById(String id) async {
     try {
-      final doc = await _firebaseService.getDocument('appointments', id);
+      final doc =
+          await _firebaseService.firestore
+              .collection('appointments')
+              .doc(id)
+              .get();
 
       if (!doc.exists) {
         return Result.error('Appointment not found');
       }
 
-      final appointment = Appointment.fromMap(
-        doc.data() as Map<String, dynamic>,
-        doc.id,
-      );
+      final appointment = Appointment.fromMap(doc.data()!, doc.id);
       return Result.success(appointment);
     } catch (e) {
       return Result.error(e.toString());
     }
   }
 
-  // Create new appointment
+  // Create appointment - no index needed for document creation
   Future<Result<Appointment>> createAppointment(Appointment appointment) async {
     try {
-      // Validate the time slot is available
+      // Validate time slot availability
       final timeSlotResult = await isTimeSlotAvailable(
         appointment.timeSlotId,
         appointment.dateTime,
@@ -80,22 +72,20 @@ class AppointmentController {
       }
 
       // Create appointment in Firestore
-      final docRef = await _firebaseService.addDocument(
-        'appointments',
-        appointment.toMap(),
-      );
+      final docRef = await _firebaseService.firestore
+          .collection('appointments')
+          .add(appointment.toMap());
 
-      // Update the time slot to increment booked patients
+      // Update time slot booking count
       await _incrementTimeSlotBooking(appointment.timeSlotId);
 
-      // Return success with the appointment ID
       return Result.success(appointment.copyWith(id: docRef.id));
     } catch (e) {
       return Result.error(e.toString());
     }
   }
 
-  // Update existing appointment
+  // Update appointment - no index needed for document update
   Future<Result<Appointment>> updateAppointment(Appointment appointment) async {
     try {
       // Check if appointment exists
@@ -135,10 +125,13 @@ class AppointmentController {
       }
 
       // Update appointment in Firestore
-      await _firebaseService.updateDocument('appointments', appointment.id, {
-        ...appointment.toMap(),
-        'updatedAt': DateTime.now().toIso8601String(),
-      });
+      await _firebaseService.firestore
+          .collection('appointments')
+          .doc(appointment.id)
+          .update({
+            ...appointment.toMap(),
+            'updatedAt': DateTime.now().toIso8601String(),
+          });
 
       return Result.success(appointment);
     } catch (e) {
@@ -146,7 +139,7 @@ class AppointmentController {
     }
   }
 
-  // Cancel appointment
+  // Cancel appointment - no index needed for document update
   Future<Result<void>> cancelAppointment(String id) async {
     try {
       // Check if appointment exists
@@ -160,10 +153,13 @@ class AppointmentController {
       final appointment = appointmentResult.data!;
 
       // Update appointment status
-      await _firebaseService.updateDocument('appointments', id, {
-        'status': AppointmentStatus.cancelled.toString().split('.').last,
-        'updatedAt': DateTime.now().toIso8601String(),
-      });
+      await _firebaseService.firestore
+          .collection('appointments')
+          .doc(id)
+          .update({
+            'status': AppointmentStatus.cancelled.toString().split('.').last,
+            'updatedAt': DateTime.now().toIso8601String(),
+          });
 
       // Update time slot booking
       await _decrementTimeSlotBooking(appointment.timeSlotId);
@@ -174,7 +170,7 @@ class AppointmentController {
     }
   }
 
-  // Get available time slots for a doctor on a specific date
+  // Get available time slots - uses composite index on doctorId, date, isActive
   Future<Result<List<TimeSlot>>> getAvailableTimeSlots(
     String doctorId,
     DateTime date,
@@ -184,26 +180,25 @@ class AppointmentController {
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
-      // Query time slots by doctor and date
-      final snapshot = await _firebaseService.queryCollection('time_slots', [
-        QueryFilter(field: 'doctorId', isEqualTo: doctorId),
-        QueryFilter(
-          field: 'date',
-          isGreaterThanOrEqualTo: startOfDay.toIso8601String(),
-        ),
-        QueryFilter(
-          field: 'date',
-          isLessThanOrEqualTo: endOfDay.toIso8601String(),
-        ),
-        QueryFilter(field: 'isActive', isEqualTo: true),
-      ], orderBy: 'startTime');
+      // Query time slots by doctor and date - uses composite index
+      final snapshot =
+          await _firebaseService.firestore
+              .collection('time_slots')
+              .where('doctorId', isEqualTo: doctorId)
+              .where(
+                'date',
+                isGreaterThanOrEqualTo: startOfDay.toIso8601String(),
+              )
+              .where('date', isLessThanOrEqualTo: endOfDay.toIso8601String())
+              .where('isActive', isEqualTo: true)
+              .orderBy('date')
+              .orderBy('startTime')
+              .get();
 
-      // Convert to TimeSlot objects
       final timeSlots =
-          snapshot.docs.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            return TimeSlot.fromMap({...data, 'id': doc.id});
-          }).toList();
+          snapshot.docs
+              .map((doc) => TimeSlot.fromMap({...doc.data(), 'id': doc.id}))
+              .toList();
 
       return Result.success(timeSlots);
     } catch (e) {
@@ -211,19 +206,23 @@ class AppointmentController {
     }
   }
 
-  // Check if a time slot is available
+  // Check time slot availability - no index needed for document lookup
   Future<Result<bool>> isTimeSlotAvailable(
     String timeSlotId,
     DateTime date,
   ) async {
     try {
-      // Check if the time slot exists and is active
-      final doc = await _firebaseService.getDocument('time_slots', timeSlotId);
+      final doc =
+          await _firebaseService.firestore
+              .collection('time_slots')
+              .doc(timeSlotId)
+              .get();
+
       if (!doc.exists) {
         return Result.error('Time slot not found');
       }
 
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data()!;
       final timeSlot = TimeSlot.fromMap({...data, 'id': doc.id});
 
       // Check if slot is active and not fully booked
@@ -249,26 +248,21 @@ class AppointmentController {
     }
   }
 
-  // Get appointments by patient
+  // Get appointments by patient - uses composite index on patientId, dateTime
   Future<Result<List<Appointment>>> getAppointmentsByPatient(
     String patientId,
   ) async {
     try {
-      final snapshot = await _firebaseService.queryCollection(
-        'appointments',
-        [QueryFilter(field: 'patientId', isEqualTo: patientId)],
-        orderBy: 'dateTime',
-        descending: true,
-      );
+      final snapshot =
+          await _firebaseService.firestore
+              .collection('appointments')
+              .where('patientId', isEqualTo: patientId)
+              .orderBy('dateTime', descending: true)
+              .get();
 
       final appointments =
           snapshot.docs
-              .map(
-                (doc) => Appointment.fromMap(
-                  doc.data() as Map<String, dynamic>,
-                  doc.id,
-                ),
-              )
+              .map((doc) => Appointment.fromMap(doc.data(), doc.id))
               .toList();
 
       return Result.success(appointments);
@@ -277,26 +271,21 @@ class AppointmentController {
     }
   }
 
-  // Get appointments by doctor
+  // Get appointments by doctor - uses composite index on doctorId, dateTime
   Future<Result<List<Appointment>>> getAppointmentsByDoctor(
     String doctorId,
   ) async {
     try {
-      final snapshot = await _firebaseService.queryCollection(
-        'appointments',
-        [QueryFilter(field: 'doctorId', isEqualTo: doctorId)],
-        orderBy: 'dateTime',
-        descending: true,
-      );
+      final snapshot =
+          await _firebaseService.firestore
+              .collection('appointments')
+              .where('doctorId', isEqualTo: doctorId)
+              .orderBy('dateTime', descending: true)
+              .get();
 
       final appointments =
           snapshot.docs
-              .map(
-                (doc) => Appointment.fromMap(
-                  doc.data() as Map<String, dynamic>,
-                  doc.id,
-                ),
-              )
+              .map((doc) => Appointment.fromMap(doc.data(), doc.id))
               .toList();
 
       return Result.success(appointments);
@@ -305,32 +294,29 @@ class AppointmentController {
     }
   }
 
-  // Get appointments by date
+  // Get appointments by date - uses index on dateTime
   Future<Result<List<Appointment>>> getAppointmentsByDate(DateTime date) async {
     try {
-      // Format date to start and end of day for query
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
-      final snapshot = await _firebaseService.queryCollection('appointments', [
-        QueryFilter(
-          field: 'dateTime',
-          isGreaterThanOrEqualTo: startOfDay.toIso8601String(),
-        ),
-        QueryFilter(
-          field: 'dateTime',
-          isLessThanOrEqualTo: endOfDay.toIso8601String(),
-        ),
-      ], orderBy: 'dateTime');
+      final snapshot =
+          await _firebaseService.firestore
+              .collection('appointments')
+              .where(
+                'dateTime',
+                isGreaterThanOrEqualTo: startOfDay.toIso8601String(),
+              )
+              .where(
+                'dateTime',
+                isLessThanOrEqualTo: endOfDay.toIso8601String(),
+              )
+              .orderBy('dateTime')
+              .get();
 
       final appointments =
           snapshot.docs
-              .map(
-                (doc) => Appointment.fromMap(
-                  doc.data() as Map<String, dynamic>,
-                  doc.id,
-                ),
-              )
+              .map((doc) => Appointment.fromMap(doc.data(), doc.id))
               .toList();
 
       return Result.success(appointments);
@@ -339,7 +325,7 @@ class AppointmentController {
     }
   }
 
-  // Create payment for appointment
+  // Create payment for appointment - no index needed
   Future<Result<void>> createPaymentForAppointment(
     Appointment appointment,
   ) async {
@@ -363,8 +349,7 @@ class AppointmentController {
 
   // Private helper methods
   Future<void> _incrementTimeSlotBooking(String timeSlotId) async {
-    return await _firebaseService.runTransaction((transaction) async {
-      // Get time slot document
+    return await _firebaseService.firestore.runTransaction((transaction) async {
       final docRef = _firebaseService.firestore
           .collection('time_slots')
           .doc(timeSlotId);
@@ -374,7 +359,7 @@ class AppointmentController {
         throw Exception('Time slot not found');
       }
 
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data()!;
       final currentBookings = data['bookedPatients'] ?? 0;
       final maxPatients = data['maxPatients'] ?? 1;
 
@@ -382,14 +367,12 @@ class AppointmentController {
         throw Exception('Time slot is fully booked');
       }
 
-      // Increment booked patients
       transaction.update(docRef, {'bookedPatients': currentBookings + 1});
     });
   }
 
   Future<void> _decrementTimeSlotBooking(String timeSlotId) async {
-    return await _firebaseService.runTransaction((transaction) async {
-      // Get time slot document
+    return await _firebaseService.firestore.runTransaction((transaction) async {
       final docRef = _firebaseService.firestore
           .collection('time_slots')
           .doc(timeSlotId);
@@ -399,14 +382,13 @@ class AppointmentController {
         throw Exception('Time slot not found');
       }
 
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data()!;
       final currentBookings = data['bookedPatients'] ?? 0;
 
       if (currentBookings <= 0) {
         return; // Already at zero, no need to decrement
       }
 
-      // Decrement booked patients
       transaction.update(docRef, {'bookedPatients': currentBookings - 1});
     });
   }
