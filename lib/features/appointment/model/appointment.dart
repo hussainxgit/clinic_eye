@@ -37,6 +37,7 @@ class Appointment {
   });
 
   Appointment copyWith({
+    String? id,
     String? patientId,
     String? patientName,
     String? doctorId,
@@ -52,7 +53,7 @@ class Appointment {
     DateTime? updatedAt,
   }) {
     return Appointment(
-      id: id,
+      id: id ?? '',
       patientId: patientId ?? this.patientId,
       patientName: patientName ?? this.patientName,
       doctorId: doctorId ?? this.doctorId,

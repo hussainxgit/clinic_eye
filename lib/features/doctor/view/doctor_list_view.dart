@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/views/widgets/common/generic_filter_dialog.dart';
 import '../model/doctor.dart';
 import '../provider/doctor_provider.dart';
+import 'doctor_appointments_details.dart';
 import 'doctor_form_view.dart';
 
 // StateProvider to hold the current filter values
@@ -156,10 +157,18 @@ class DoctorListWithFilter extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           onTap: () {
+                            // Navigator.of(context).push(
+                            //   MaterialPageRoute(
+                            //     builder:
+                            //         (_) => EditDoctorFormView(doctor: doctor),
+                            //   ),
+                            // );
                             Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder:
-                                    (_) => EditDoctorFormView(doctor: doctor),
+                                    (_) => DoctorAppointmentsDetails(
+                                      doctor: doctor,
+                                    ),
                               ),
                             );
                           },

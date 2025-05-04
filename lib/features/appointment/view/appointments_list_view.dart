@@ -1,3 +1,4 @@
+import 'package:clinic_eye/features/appointment/view/appointment_form_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/views/widgets/common/generic_filter_dialog.dart';
@@ -11,7 +12,7 @@ final appointmentFiltersProvider = StateProvider<Map<String, dynamic>>(
 
 // Provider that extracts unique statuses from appointments data
 final appointmentStatusesProvider = Provider<List<String>>((ref) {
-  final appointmentsResult = ref.watch(getAllAppointmentsProvider);
+  final appointmentsResult = ref.watch(allAppointmentsProvider);
 
   if (appointmentsResult.value == null ||
       !appointmentsResult.value!.isSuccess) {
@@ -31,7 +32,7 @@ final appointmentStatusesProvider = Provider<List<String>>((ref) {
 
 // Provider that filters appointments based on filter criteria
 final filteredAppointmentsProvider = Provider<List<Appointment>>((ref) {
-  final appointmentsResult = ref.watch(getAllAppointmentsProvider);
+  final appointmentsResult = ref.watch(allAppointmentsProvider);
   final filters = ref.watch(appointmentFiltersProvider);
 
   if (appointmentsResult.value == null ||
@@ -74,7 +75,7 @@ class AppointmentListWithFilter extends ConsumerWidget {
     final filteredAppointments = ref.watch(filteredAppointmentsProvider);
     final filters = ref.watch(appointmentFiltersProvider);
     final hasActiveFilters = filters.isNotEmpty;
-    final appointmentsAsync = ref.watch(getAllAppointmentsProvider);
+    final appointmentsAsync = ref.watch(allAppointmentsProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,11 +91,11 @@ class AppointmentListWithFilter extends ConsumerWidget {
               children: [
                 ElevatedButton.icon(
                   onPressed: () {
-                    // Navigator.of(context).push(
-                    //   MaterialPageRoute(
-                    //     builder: (_) => const AddAppointmentFormView(),
-                    //   ),
-                    // );
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AppointmentFormView(),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.add),
                   label: const Text('Add Appointment'),
