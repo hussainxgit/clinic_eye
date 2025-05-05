@@ -12,43 +12,78 @@ import '../../slot/model/time_slot.dart';
 import '../model/appointment.dart';
 import '../provider/appointment_provider.dart';
 
+// State provider for form data - makes state management clearer
+final appointmentFormProvider = StateProvider.autoDispose<AppointmentFormData>(
+  (ref) => AppointmentFormData(),
+);
+
+// Data class to hold form state
+class AppointmentFormData {
+  final String? patientId;
+  final String? doctorId;
+  final DateTime? date;
+  final TimeSlot? timeSlot;
+  final String notes;
+  
+  AppointmentFormData({
+    this.patientId,
+    this.doctorId,
+    this.date,
+    this.timeSlot,
+    this.notes = '',
+  });
+  
+  AppointmentFormData copyWith({
+    String? patientId,
+    String? doctorId,
+    DateTime? date,
+    TimeSlot? timeSlot,
+    String? notes,
+  }) {
+    return AppointmentFormData(
+      patientId: patientId ?? this.patientId,
+      doctorId: doctorId ?? this.doctorId,
+      date: date ?? this.date,
+      timeSlot: timeSlot ?? this.timeSlot,
+      notes: notes ?? this.notes,
+    );
+  }
+  
+  bool get isValid => 
+    patientId != null && 
+    doctorId != null && 
+    date != null && 
+    timeSlot != null;
+}
+
 class AppointmentFormView extends ConsumerStatefulWidget {
   final String? appointmentId;
 
   const AppointmentFormView({super.key, this.appointmentId});
 
   @override
-  ConsumerState<AppointmentFormView> createState() =>
-      _AppointmentFormViewState();
+  ConsumerState<AppointmentFormView> createState() => _AppointmentFormViewState();
 }
 
 class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-  // Form field controllers
-  Patient? selectedPatient;
-  String? _selectedPatientId;
-  String? _selectedDoctorId;
-  DateTime? _selectedDate;
-  TimeSlot? _selectedTimeSlot;
   final TextEditingController _notesController = TextEditingController();
-
-  // States
+  
   bool _isLoading = false;
-  bool _isEditing = false;
   List<TimeSlot> _availableTimeSlots = [];
+  Patient? _selectedPatient;
 
   @override
   void initState() {
     super.initState();
-    _isEditing = widget.appointmentId != null;
-
-    // If editing, load appointment data
-    if (_isEditing) {
+    
+    // If editing existing appointment, load its data
+    if (widget.appointmentId != null) {
       _loadAppointmentData();
     }
   }
 
+  // Load existing appointment data
   Future<void> _loadAppointmentData() async {
     setState(() => _isLoading = true);
 
@@ -59,36 +94,45 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
 
       if (appointmentResult.isSuccess && appointmentResult.data != null) {
         final appointment = appointmentResult.data!;
-
-        setState(() {
-          _selectedPatientId = appointment.patientId;
-          _selectedDoctorId = appointment.doctorId;
-          _selectedDate = appointment.dateTime;
-          _notesController.text = appointment.notes ?? '';
-        });
-
-        // Load available time slots for the selected date and doctor
-        await _loadTimeSlots();
-
-        // Find the selected time slot
-        _selectedTimeSlot = _availableTimeSlots.firstWhere(
-          (slot) => slot.id == appointment.timeSlotId,
-          orElse:
-              () =>
-                  _availableTimeSlots.isNotEmpty
-                      ? _availableTimeSlots.first
-                      : throw Exception('No available time slots'),
+        final formData = ref.read(appointmentFormProvider.notifier);
+        
+        // Update form state
+        formData.state = AppointmentFormData(
+          patientId: appointment.patientId,
+          doctorId: appointment.doctorId,
+          date: appointment.dateTime,
+          notes: appointment.notes ?? '',
         );
+        
+        // Update notes controller
+        _notesController.text = appointment.notes ?? '';
+
+        // Load time slots
+        await _loadTimeSlots();
+        
+        // Find the selected time slot
+        if (_availableTimeSlots.isNotEmpty) {
+          TimeSlot? selectedSlot = _availableTimeSlots.firstWhere(
+            (slot) => slot.id == appointment.timeSlotId,
+            orElse: () => _availableTimeSlots.first,
+          );
+          
+          // Update the time slot in the form data
+          formData.state = formData.state.copyWith(timeSlot: selectedSlot);
+        }
       }
     } catch (e) {
-      _showErrorSnackBar('Failed to load appointment data: ${e.toString()}');
+      _showMessage('Failed to load appointment data', isError: true);
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
+  // Load available time slots for selected doctor and date
   Future<void> _loadTimeSlots() async {
-    if (_selectedDoctorId == null || _selectedDate == null) {
+    final formData = ref.read(appointmentFormProvider);
+    
+    if (formData.doctorId == null || formData.date == null) {
       setState(() => _availableTimeSlots = []);
       return;
     }
@@ -96,444 +140,450 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
     setState(() => _isLoading = true);
 
     try {
-      final timeSlotsResult = await ref
+      final result = await ref
           .read(appointmentControllerProvider)
-          .getAvailableTimeSlots(_selectedDoctorId!, _selectedDate!);
+          .getAvailableTimeSlots(formData.doctorId!, formData.date!);
 
-      if (timeSlotsResult.isSuccess) {
-        setState(() => _availableTimeSlots = timeSlotsResult.data ?? []);
+      if (result.isSuccess) {
+        setState(() => _availableTimeSlots = result.data ?? []);
       } else {
-        print(timeSlotsResult.errorMessage);
-
-        _showErrorSnackBar(
-          'Failed to load time slots: ${timeSlotsResult.errorMessage}',
-        );
+        _showMessage('Failed to load time slots', isError: true);
       }
     } catch (e) {
-      _showErrorSnackBar('Failed to load time slots: ${e.toString()}');
-      print(e.toString());
+      _showMessage('Error loading time slots', isError: true);
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
+  // Submit form - simplified with clear steps
   Future<void> _handleSubmit() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    if (_selectedPatientId == null) {
-      _showErrorSnackBar('Please select a patient');
-      return;
-    }
-
-    if (_selectedDoctorId == null) {
-      _showErrorSnackBar('Please select a doctor');
-      return;
-    }
-
-    if (_selectedDate == null) {
-      _showErrorSnackBar('Please select a date');
-      return;
-    }
-
-    if (_selectedTimeSlot == null) {
-      _showErrorSnackBar('Please select a time slot');
+    if (!_formKey.currentState!.validate()) return;
+    
+    final formData = ref.read(appointmentFormProvider);
+    if (!formData.isValid) {
+      _showMessage('Please complete all required fields', isError: true);
       return;
     }
 
     setState(() => _isLoading = true);
-
+    
     try {
-      final patientsAsyncValue = ref.read(getAllPatientsProvider);
-      final doctorsAsyncValue = ref.read(getAllDoctorsProvider);
-
-      if (patientsAsyncValue.value == null || doctorsAsyncValue.value == null) {
-        _showErrorSnackBar('Failed to load patient or doctor data');
+      // Get detailed patient and doctor objects
+      _selectedPatient = await _getPatientById(formData.patientId!);
+      final doctor = await _getDoctorById(formData.doctorId!);
+      
+      if (_selectedPatient == null || doctor == null) {
+        _showMessage('Could not find patient or doctor details', isError: true);
         return;
       }
-
-      final patients = patientsAsyncValue.value!.data ?? [];
-      final doctors = doctorsAsyncValue.value!.data ?? [];
-
-      final patient = patients.firstWhere(
-        (p) => p.id == _selectedPatientId,
-        orElse: () => throw Exception('Patient not found'),
-      );
-      selectedPatient = patient;
-
-      final doctor = doctors.firstWhere(
-        (d) => d.id == _selectedDoctorId,
-        orElse: () => throw Exception('Doctor not found'),
-      );
-
+      
       // Create appointment object
-      final appointment = Appointment(
-        id: widget.appointmentId ?? '',
-        patientId: patient.id,
-        patientName: patient.name,
-        doctorId: doctor.id,
+      final appointment = _createAppointmentObject(
+        patientId: _selectedPatient!.id,
+        patientName: _selectedPatient!.name,
+        doctorId: doctor.id, 
         doctorName: doctor.name,
-        slotId: _selectedTimeSlot!.slotId,
-        timeSlotId: _selectedTimeSlot!.id,
-        dateTime: DateTime(
-          _selectedDate!.year,
-          _selectedDate!.month,
-          _selectedDate!.day,
-          _selectedTimeSlot!.startTime.hour,
-          _selectedTimeSlot!.startTime.minute,
-        ),
-        status: AppointmentStatus.scheduled,
-        paymentStatus: PaymentStatus.unpaid,
-        notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+        formData: formData
       );
-
-      Result<Appointment> result;
-
-      if (_isEditing) {
-        // Update existing appointment
-        result = await ref
-            .read(appointmentControllerProvider)
-            .updateAppointment(appointment);
-      } else {
-        // Create new appointment
-        result = await ref
-            .read(appointmentControllerProvider)
-            .createAppointment(appointment);
-      }
-
+      
+      // Submit to backend
+      final result = await _submitAppointment(appointment);
+      
       if (!mounted) return;
-
-      if (result.isSuccess) {
-        // Invalidate providers to refresh data
-        ref.invalidate(allAppointmentsProvider);
-
-        // Show success message and navigate back
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _isEditing
-                  ? 'Appointment updated successfully'
-                  : 'Appointment created successfully',
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Create payment record if needed
-        if (!_isEditing || appointment.paymentStatus == PaymentStatus.unpaid) {
-          _createPaymentRecord(result.data!);
-        }
-
-        Navigator.of(context).pop();
+      
+      if (result.isSuccess && result.data != null) {
+        // Handle successful submission
+        _handleSuccessfulSubmission(result.data!);
       } else {
-        _showErrorSnackBar(result.errorMessage ?? 'Failed to save appointment');
+        _showMessage(result.errorMessage ?? 'Failed to save appointment', isError: true);
       }
     } catch (e) {
-      _showErrorSnackBar('Error: ${e.toString()}');
+      _showMessage('Error processing appointment', isError: true);
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _createPaymentRecord(Appointment appointment) async {
-    try {
-      print('Creating payment record for appointment: ${appointment.id}');
-      final paymentResult = await ref
-          .read(paymentControllerProvider)
-          .createPayment(
-            appointmentId: appointment.id,
-            amount: 25.0, // Example amount
-            patientId: appointment.patientId,
-            doctorId: appointment.doctorId,
-          );
+  // Helper method to get patient by ID
+  Future<Patient?> _getPatientById(String patientId) async {
+    final patientsResult = ref.read(getAllPatientsProvider).value;
+    if (patientsResult == null || !patientsResult.isSuccess) return null;
+    
+    final patients = patientsResult.data ?? [];
+    return patients.firstWhere(
+      (p) => p.id == patientId,
+      orElse: () => throw Exception('Patient not found'),
+    );
+  }
+  
+  // Helper method to get doctor by ID
+  Future<Doctor?> _getDoctorById(String doctorId) async {
+    final doctorsResult = ref.read(getAllDoctorsProvider).value;
+    if (doctorsResult == null || !doctorsResult.isSuccess) return null;
+    
+    final doctors = doctorsResult.data ?? [];
+    return doctors.firstWhere(
+      (d) => d.id == doctorId,
+      orElse: () => throw Exception('Doctor not found'),
+    );
+  }
+  
+  // Create appointment object
+  Appointment _createAppointmentObject({
+    required String patientId,
+    required String patientName,
+    required String doctorId,
+    required String doctorName,
+    required AppointmentFormData formData,
+  }) {
+    return Appointment(
+      id: widget.appointmentId ?? '',
+      patientId: patientId,
+      patientName: patientName,
+      doctorId: doctorId,
+      doctorName: doctorName,
+      slotId: formData.timeSlot!.slotId,
+      timeSlotId: formData.timeSlot!.id,
+      dateTime: DateTime(
+        formData.date!.year,
+        formData.date!.month,
+        formData.date!.day,
+        formData.timeSlot!.startTime.hour,
+        formData.timeSlot!.startTime.minute,
+      ),
+      status: AppointmentStatus.scheduled,
+      paymentStatus: PaymentStatus.unpaid,
+      notes: formData.notes.isNotEmpty ? formData.notes : null,
+    );
+  }
+  
+  // Submit appointment to backend
+  Future<Result<Appointment>> _submitAppointment(Appointment appointment) async {
+    final isEditing = widget.appointmentId != null;
+    
+    if (isEditing) {
+      return ref.read(appointmentControllerProvider).updateAppointment(appointment);
+    } else {
+      return ref.read(appointmentControllerProvider).createAppointment(appointment);
+    }
+  }
+  
+  // Handle successful submission
+  void _handleSuccessfulSubmission(Appointment appointment) {
+    final isEditing = widget.appointmentId != null;
+    
+    // First create payment if needed - do this before navigation
+    if (!isEditing || appointment.paymentStatus == PaymentStatus.unpaid) {
+      _createPaymentRecord(appointment);
+    }
+    
+    // Refresh appointment list
+    ref.invalidate(allAppointmentsProvider);
+    
+    // Show success message
+    _showMessage(
+      isEditing ? 'Appointment updated successfully' : 'Appointment created successfully',
+      isError: false
+    );
+    
+    // Navigate back - do this last after payment creation
+    Navigator.of(context).pop();
+  }
 
-      if (!paymentResult.isSuccess) {
-        // Just log the error, don't block the flow
-        print('Failed to create payment: ${paymentResult.errorMessage}');
-      } else {
-        // Optionally, you can show a success message or perform other actions
-        print(
-          'Payment created successfully for appointment: ${appointment.id}',
-        );
-        final generatePaymentLink = await ref
-            .read(paymentControllerProvider)
-            .generatePaymentLink(
-              paymentResult.data!.id,
-              selectedPatient!.name,
-              selectedPatient!.phone,
-            );
-        if (generatePaymentLink.isSuccess) {
-          // Optionally, you can show a success message or perform other actions
-          print(
-            'Payment link generated successfully: ${generatePaymentLink.data}',
-          );
-        } else {
-          // Just log the error, don't block the flow
-          print(
-            'Failed to generate payment link: ${generatePaymentLink.errorMessage}',
-          );
-        }
-      }
+  // Create payment record in a clean, simplified manner
+  Future<void> _createPaymentRecord(Appointment appointment) async {
+    if (_selectedPatient == null || !mounted) return;
+    
+    try {
+      // Capture controller and patient info before potential async gaps
+      final paymentController = ref.read(paymentControllerProvider);
+      final patient = _selectedPatient!;
+      
+      // Step 1: Create payment record
+      final paymentResult = await paymentController.createPayment(
+        appointmentId: appointment.id,
+        patientId: appointment.patientId,
+        doctorId: appointment.doctorId,
+        amount: 25.0, // Consider making this dynamic based on appointment type
+      );
+      
+      if (!paymentResult.isSuccess || paymentResult.data == null || !mounted) return;
+      
+      // Step 2: Generate payment link - check mounted again
+      await paymentController.generatePaymentLink(
+        paymentResult.data!.id,
+        patient.name,
+        patient.phone,
+      );
+      
     } catch (e) {
-      print('Error creating payment: ${e.toString()}');
+      // Payment errors shouldn't block the appointment flow
+      debugPrint('Error creating payment: ${e.toString()}');
     }
   }
 
-  void _showErrorSnackBar(String message) {
+  // Unified message display method
+  void _showMessage(String message, {required bool isError}) {
     if (!mounted) return;
-
+    
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final patientsAsyncValue = ref.watch(getAllPatientsProvider);
-    final doctorsAsyncValue = ref.watch(getAllDoctorsProvider);
-
+    // Watch form state from provider
+    final formData = ref.watch(appointmentFormProvider);
+    
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Appointment' : 'Book New Appointment'),
+        title: Text(widget.appointmentId != null ? 'Edit Appointment' : 'Book New Appointment'),
       ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _isEditing
-                            ? 'Edit Appointment Details'
-                            : 'Book New Appointment',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      const Divider(),
-                      const SizedBox(height: 16.0),
-
-                      // Patient Selection
-                      Text(
-                        'Select Patient',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 8.0),
-                      _buildPatientDropdown(patientsAsyncValue),
-                      const SizedBox(height: 24.0),
-
-                      // Doctor Selection
-                      Text(
-                        'Select Doctor',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 8.0),
-                      _buildDoctorDropdown(doctorsAsyncValue),
-                      const SizedBox(height: 24.0),
-
-                      // Date Selection
-                      Text(
-                        'Select Date',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 8.0),
-                      _buildDatePicker(),
-                      const SizedBox(height: 24.0),
-
-                      // Time Slot Selection
-                      if (_selectedDoctorId != null &&
-                          _selectedDate != null) ...[
-                        Text(
-                          'Select Time Slot',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: 8.0),
-                        _buildTimeSlotSelection(),
-                        const SizedBox(height: 24.0),
-                      ],
-
-                      // Notes
-                      Text(
-                        'Notes',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 8.0),
-                      TextFormField(
-                        controller: _notesController,
-                        decoration: const InputDecoration(
-                          hintText: 'Add any additional notes here...',
-                        ),
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: 32.0),
-
-                      // Submit Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _handleSubmit,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 12.0),
-                            child: Text(
-                              _isEditing
-                                  ? 'Update Appointment'
-                                  : 'Book Appointment',
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+      body: _isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.appointmentId != null
+                        ? 'Edit Appointment Details'
+                        : 'Book New Appointment',
+                    style: Theme.of(context).textTheme.headlineMedium,
                   ),
-                ),
+                  const Divider(),
+                  const SizedBox(height: 16.0),
+
+                  // Patient Selection
+                  _buildSectionTitle(context, 'Select Patient'),
+                  _buildPatientDropdown(formData.patientId),
+                  const SizedBox(height: 24.0),
+
+                  // Doctor Selection
+                  _buildSectionTitle(context, 'Select Doctor'),
+                  _buildDoctorDropdown(formData.doctorId),
+                  const SizedBox(height: 24.0),
+
+                  // Date Selection
+                  _buildSectionTitle(context, 'Select Date'),
+                  _buildDatePicker(formData.date),
+                  const SizedBox(height: 24.0),
+
+                  // Time Slot Selection
+                  if (formData.doctorId != null && formData.date != null) ...[
+                    _buildSectionTitle(context, 'Select Time Slot'),
+                    _buildTimeSlotSelection(formData.timeSlot),
+                    const SizedBox(height: 24.0),
+                  ],
+
+                  // Notes
+                  _buildSectionTitle(context, 'Notes'),
+                  TextFormField(
+                    controller: _notesController,
+                    decoration: const InputDecoration(
+                      hintText: 'Add any additional notes here...',
+                    ),
+                    maxLines: 3,
+                    onChanged: (value) {
+                      ref.read(appointmentFormProvider.notifier).state = 
+                          formData.copyWith(notes: value);
+                    },
+                  ),
+                  const SizedBox(height: 32.0),
+
+                  // Submit Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _handleSubmit,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        child: Text(
+                          widget.appointmentId != null
+                              ? 'Update Appointment'
+                              : 'Book Appointment',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
+          ),
     );
   }
 
-  Widget _buildPatientDropdown(
-    AsyncValue<Result<List<Patient>>> patientsAsyncValue,
-  ) {
-    return patientsAsyncValue.when(
-      data: (result) {
-        if (!result.isSuccess) {
-          return const Text('Failed to load patients');
-        }
+  // Helper widget for section titles
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleLarge,
+      ),
+    );
+  }
 
-        final patients = result.data ?? [];
-        if (patients.isEmpty) {
-          return const Text('No patients available');
-        }
+  Widget _buildPatientDropdown(String? selectedPatientId) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final patientsAsyncValue = ref.watch(getAllPatientsProvider);
+        
+        return patientsAsyncValue.when(
+          data: (result) {
+            if (!result.isSuccess) {
+              return const Text('Failed to load patients');
+            }
 
-        return DropdownButtonFormField<String>(
-          value: _selectedPatientId,
-          decoration: InputDecoration(
-            hintText: 'Select a patient',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-          items:
-              patients.map((patient) {
+            final patients = result.data ?? [];
+            if (patients.isEmpty) {
+              return const Text('No patients available');
+            }
+
+            return DropdownButtonFormField<String>(
+              value: selectedPatientId,
+              decoration: InputDecoration(
+                hintText: 'Select a patient',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              items: patients.map((patient) {
                 return DropdownMenuItem<String>(
                   value: patient.id,
                   child: Text(patient.name),
                 );
               }).toList(),
-          onChanged: (value) {
-            setState(() {
-              _selectedPatientId = value;
-            });
+              onChanged: (value) {
+                if (value != null) {
+                  ref.read(appointmentFormProvider.notifier).state = 
+                      ref.read(appointmentFormProvider).copyWith(patientId: value);
+                }
+              },
+            );
           },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stackTrace) => Text('Error: $error'),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => Text('Error: $error'),
     );
   }
 
-  Widget _buildDoctorDropdown(
-    AsyncValue<Result<List<Doctor>>> doctorsAsyncValue,
-  ) {
-    return doctorsAsyncValue.when(
-      data: (result) {
-        if (!result.isSuccess) {
-          return const Text('Failed to load doctors');
-        }
+  Widget _buildDoctorDropdown(String? selectedDoctorId) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final doctorsAsyncValue = ref.watch(getAllDoctorsProvider);
+        
+        return doctorsAsyncValue.when(
+          data: (result) {
+            if (!result.isSuccess) {
+              return const Text('Failed to load doctors');
+            }
 
-        final doctors = result.data ?? [];
-        if (doctors.isEmpty) {
-          return const Text('No doctors available');
-        }
+            final doctors = result.data ?? [];
+            if (doctors.isEmpty) {
+              return const Text('No doctors available');
+            }
 
-        // Filter out available doctors only
-        final availableDoctors =
-            doctors.where((doctor) => doctor.isAvailable).toList();
+            // Filter available doctors
+            final availableDoctors = doctors.where((doctor) => doctor.isAvailable).toList();
+            if (availableDoctors.isEmpty) {
+              return const Text('No available doctors');
+            }
 
-        if (availableDoctors.isEmpty) {
-          return const Text('No available doctors');
-        }
-
-        return DropdownButtonFormField<String>(
-          value: _selectedDoctorId,
-          decoration: InputDecoration(
-            hintText: 'Select a doctor',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-          items:
-              availableDoctors.map((doctor) {
+            return DropdownButtonFormField<String>(
+              value: selectedDoctorId,
+              decoration: InputDecoration(
+                hintText: 'Select a doctor',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              items: availableDoctors.map((doctor) {
                 return DropdownMenuItem<String>(
                   value: doctor.id,
                   child: Text('${doctor.name} (${doctor.specialty})'),
                 );
               }).toList(),
-          onChanged: (value) {
-            setState(() {
-              _selectedDoctorId = value;
-              _selectedTimeSlot = null;
-            });
-
-            if (_selectedDate != null) {
-              _loadTimeSlots();
-            }
+              onChanged: (value) {
+                if (value != null) {
+                  // Update form data
+                  ref.read(appointmentFormProvider.notifier).state = 
+                      ref.read(appointmentFormProvider).copyWith(
+                        doctorId: value,
+                        timeSlot: null
+                      );
+                  
+                  // Load time slots if date is selected
+                  final formData = ref.read(appointmentFormProvider);
+                  if (formData.date != null) {
+                    _loadTimeSlots();
+                  }
+                }
+              },
+            );
           },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stackTrace) => Text('Error: $error'),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => Text('Error: $error'),
     );
   }
 
-  Widget _buildDatePicker() {
+  Widget _buildDatePicker(DateTime? selectedDate) {
     final formatter = DateFormat('EEEE, MMMM d, yyyy');
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: () async {
-            final DateTime? picked = await showDatePicker(
-              context: context,
-              initialDate: _selectedDate ?? DateTime.now(),
-              firstDate: DateTime.now(),
-              lastDate: DateTime.now().add(const Duration(days: 90)),
-            );
+    return InkWell(
+      onTap: () async {
+        final DateTime? picked = await showDatePicker(
+          context: context,
+          initialDate: selectedDate ?? DateTime.now(),
+          firstDate: DateTime.now(),
+          lastDate: DateTime.now().add(const Duration(days: 90)),
+        );
 
-            if (picked != null && picked != _selectedDate) {
-              setState(() {
-                _selectedDate = picked;
-                _selectedTimeSlot = null;
-              });
-
-              if (_selectedDoctorId != null) {
-                _loadTimeSlots();
-              }
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _selectedDate != null
-                      ? formatter.format(_selectedDate!)
-                      : 'Select a date',
-                ),
-                const Icon(Icons.calendar_today),
-              ],
-            ),
-          ),
+        if (picked != null && picked != selectedDate) {
+          // Update form data
+          ref.read(appointmentFormProvider.notifier).state = 
+              ref.read(appointmentFormProvider).copyWith(
+                date: picked,
+                timeSlot: null
+              );
+          
+          // Load time slots if doctor is selected
+          final formData = ref.read(appointmentFormProvider);
+          if (formData.doctorId != null) {
+            _loadTimeSlots();
+          }
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey),
+          borderRadius: BorderRadius.circular(8),
         ),
-      ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              selectedDate != null
+                  ? formatter.format(selectedDate)
+                  : 'Select a date',
+            ),
+            const Icon(Icons.calendar_today),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildTimeSlotSelection() {
+  Widget _buildTimeSlotSelection(TimeSlot? selectedTimeSlot) {
     if (_availableTimeSlots.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(16.0),
@@ -549,48 +599,42 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
     return Wrap(
       spacing: 8.0,
       runSpacing: 8.0,
-      children:
-          _availableTimeSlots.map((slot) {
-            final isSelected = _selectedTimeSlot?.id == slot.id;
-            final startTime = TimeOfDay(
-              hour: slot.startTime.hour,
-              minute: slot.startTime.minute,
-            );
-            final endTime = slot.endTime;
+      children: _availableTimeSlots.map((slot) {
+        final isSelected = selectedTimeSlot?.id == slot.id;
+        final startTime = slot.startTime;
+        final endTime = slot.endTime;
 
-            return ChoiceChip(
-              label: Text(
-                '${_formatTimeOfDay(startTime)} - ${_formatTimeOfDay(endTime)}',
-              ),
-              selected: isSelected,
-              onSelected:
-                  slot.isAvailable
-                      ? (selected) {
-                        setState(() {
-                          _selectedTimeSlot = selected ? slot : null;
-                        });
-                      }
-                      : null,
-              backgroundColor: Colors.grey[200],
-              selectedColor: Theme.of(context).colorScheme.primary,
-              labelStyle: TextStyle(
-                color:
-                    isSelected
-                        ? Colors.white
-                        : slot.isAvailable
-                        ? Colors.black
-                        : Colors.grey,
-              ),
-            );
-          }).toList(),
+        return ChoiceChip(
+          label: Text(
+            '${_formatTimeOfDay(startTime)} - ${_formatTimeOfDay(endTime)}',
+          ),
+          selected: isSelected,
+          onSelected: slot.isAvailable
+              ? (selected) {
+                  if (selected) {
+                    ref.read(appointmentFormProvider.notifier).state = 
+                        ref.read(appointmentFormProvider).copyWith(timeSlot: slot);
+                  }
+                }
+              : null,
+          backgroundColor: Colors.grey[200],
+          selectedColor: Theme.of(context).colorScheme.primary,
+          labelStyle: TextStyle(
+            color: isSelected
+                ? Colors.white
+                : slot.isAvailable
+                    ? Colors.black
+                    : Colors.grey,
+          ),
+        );
+      }).toList(),
     );
   }
 
   String _formatTimeOfDay(TimeOfDay time) {
-    final hour =
-        time.hour == 0
-            ? 12
-            : time.hour > 12
+    final hour = time.hour == 0
+        ? 12
+        : time.hour > 12
             ? time.hour - 12
             : time.hour;
 
