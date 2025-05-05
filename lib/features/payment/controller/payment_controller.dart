@@ -1,4 +1,5 @@
 // services/payment/payment_service.dart
+import 'package:clinic_eye/core/models/result.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -9,14 +10,14 @@ import '../model/payment.dart';
 import '../../../core/services/firebase/firebase_service.dart';
 import '../../messaging/services/sms_service.dart';
 
-class PaymentService {
+class PaymentController {
   final FirebaseService _firebaseService;
   final http.Client _httpClient;
 
-  PaymentService(this._firebaseService) : _httpClient = http.Client();
+  PaymentController(this._firebaseService) : _httpClient = http.Client();
 
   // Create payment record in Firestore
-  Future<Payment> createPayment({
+  Future<Result<Payment>> createPayment({
     required String appointmentId,
     required String patientId,
     required String doctorId,
@@ -29,7 +30,7 @@ class PaymentService {
       final latestPayment = existingPayments.first;
       if (latestPayment.status == PaymentStatus.successful ||
           latestPayment.status == PaymentStatus.pending) {
-        return latestPayment;
+        return Result.success(latestPayment);
       }
     }
 
@@ -50,14 +51,13 @@ class PaymentService {
         .collection('payments')
         .add(newPayment.toMap());
 
-    return newPayment.copyWith(id: docRef.id);
+    return Result.success(newPayment.copyWith(id: docRef.id));
   }
 
   // Generate payment link via MyFatoorah API
-  Future<Payment> generatePaymentLink(
+  Future<Result<Payment>> generatePaymentLink(
     String paymentId,
     String patientName,
-    String patientEmail,
     String patientMobile,
   ) async {
     final payment = await _getPaymentById(paymentId);
@@ -78,7 +78,7 @@ class PaymentService {
         'DisplayCurrencyIso': payment.currency,
         'MobileCountryCode': '+965',
         'CustomerMobile': patientMobile,
-        'CustomerEmail': patientEmail,
+        'CustomerEmail': '',
         'InvoiceValue': payment.amount,
         'CallBackUrl': PaymentConfig.webhookUrl,
         'ErrorUrl': PaymentConfig.webhookUrl,
@@ -113,7 +113,7 @@ class PaymentService {
             .doc(payment.id)
             .update(updatedPayment.toMap());
 
-        return updatedPayment;
+        return Result.success(updatedPayment);
       } else {
         final errorMsg =
             responseData['ValidationErrors']?[0]?['Error'] ??

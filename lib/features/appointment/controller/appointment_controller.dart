@@ -1,15 +1,12 @@
 import '../../../core/models/result.dart';
 import '../../../core/services/firebase/firebase_service.dart';
-import '../../payment/services/payment_service.dart';
 import '../../slot/model/time_slot.dart';
 import '../model/appointment.dart';
 
 class AppointmentController {
   final FirebaseService _firebaseService;
-  final PaymentService _paymentService;
 
-  AppointmentController(this._firebaseService)
-    : _paymentService = PaymentService(_firebaseService);
+  AppointmentController(this._firebaseService);
 
   // Get all appointments - uses index on dateTime
   Future<Result<List<Appointment>>> getAllAppointments() async {
@@ -325,28 +322,6 @@ class AppointmentController {
     }
   }
 
-  // Create payment for appointment - no index needed
-  Future<Result<void>> createPaymentForAppointment(
-    Appointment appointment,
-  ) async {
-    try {
-      // Get service amount based on doctor's specialty or a default value
-      double amount = 15.0; // Default consultation fee
-
-      // Create payment record
-      await _paymentService.createPayment(
-        appointmentId: appointment.id,
-        patientId: appointment.patientId,
-        doctorId: appointment.doctorId,
-        amount: amount,
-      );
-
-      return Result.success(null);
-    } catch (e) {
-      return Result.error(e.toString());
-    }
-  }
-
   // Private helper methods
   Future<void> _incrementTimeSlotBooking(String timeSlotId) async {
     return await _firebaseService.firestore.runTransaction((transaction) async {
@@ -393,3 +368,25 @@ class AppointmentController {
     });
   }
 }
+
+  // Create payment for appointment - no index needed
+  // Future<Result<void>> createPaymentForAppointment(
+  //   Appointment appointment,
+  // ) async {
+  //   try {
+  //     // Get service amount based on doctor's specialty or a default value
+  //     double amount = 15.0; // Default consultation fee
+
+  //     // Create payment record
+  //     await _paymentService.createPayment(
+  //       appointmentId: appointment.id,
+  //       patientId: appointment.patientId,
+  //       doctorId: appointment.doctorId,
+  //       amount: amount,
+  //     );
+
+  //     return Result.success(null);
+  //   } catch (e) {
+  //     return Result.error(e.toString());
+  //   }
+  // }

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/dependencies.dart';
 import '../../../core/models/result.dart';
 import '../../slot/model/time_slot.dart';
-import '../controller/appointment_controller.dart';
 import '../model/appointment.dart';
 
 // Provider for creating an appointment
@@ -80,15 +79,17 @@ final appointmentsByDateProvider =
       return appointmentController.getAppointmentsByDate(date);
     });
 
-// Provider for creating a payment for an appointment
-final createPaymentForAppointmentProvider =
-    FutureProvider.family<Result<void>, Appointment>((ref, appointment) {
-      final appointmentController = ref.watch(appointmentControllerProvider);
-      return appointmentController.createPaymentForAppointment(appointment);
-    });
-
 // Provider for getting all appointments
-final allAppointmentsProvider = FutureProvider<Result<List<Appointment>>>((ref) {
+final allAppointmentsProvider = FutureProvider<Result<List<Appointment>>>((
+  ref,
+) {
   final appointmentController = ref.watch(appointmentControllerProvider);
   return appointmentController.getAllAppointments();
 });
+
+// Provider for creating a payment for an appointment
+// final createPaymentForAppointmentProvider =
+//     FutureProvider.family<Result<void>, Appointment>((ref, appointment) {
+//       final appointmentController = ref.watch(appointmentControllerProvider);
+//       return appointmentController.createPaymentForAppointment(appointment);
+//     });

@@ -26,6 +26,7 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   // Form field controllers
+  Patient? selectedPatient;
   String? _selectedPatientId;
   String? _selectedDoctorId;
   DateTime? _selectedDate;
@@ -159,6 +160,7 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
         (p) => p.id == _selectedPatientId,
         orElse: () => throw Exception('Patient not found'),
       );
+      selectedPatient = patient;
 
       final doctor = doctors.firstWhere(
         (d) => d.id == _selectedDoctorId,
@@ -236,13 +238,42 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
 
   Future<void> _createPaymentRecord(Appointment appointment) async {
     try {
+      print('Creating payment record for appointment: ${appointment.id}');
       final paymentResult = await ref
-          .read(appointmentControllerProvider)
-          .createPaymentForAppointment(appointment);
+          .read(paymentControllerProvider)
+          .createPayment(
+            appointmentId: appointment.id,
+            amount: 25.0, // Example amount
+            patientId: appointment.patientId,
+            doctorId: appointment.doctorId,
+          );
 
       if (!paymentResult.isSuccess) {
         // Just log the error, don't block the flow
         print('Failed to create payment: ${paymentResult.errorMessage}');
+      } else {
+        // Optionally, you can show a success message or perform other actions
+        print(
+          'Payment created successfully for appointment: ${appointment.id}',
+        );
+        final generatePaymentLink = await ref
+            .read(paymentControllerProvider)
+            .generatePaymentLink(
+              paymentResult.data!.id,
+              selectedPatient!.name,
+              selectedPatient!.phone,
+            );
+        if (generatePaymentLink.isSuccess) {
+          // Optionally, you can show a success message or perform other actions
+          print(
+            'Payment link generated successfully: ${generatePaymentLink.data}',
+          );
+        } else {
+          // Just log the error, don't block the flow
+          print(
+            'Failed to generate payment link: ${generatePaymentLink.errorMessage}',
+          );
+        }
       }
     } catch (e) {
       print('Error creating payment: ${e.toString()}');

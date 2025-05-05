@@ -1,10 +1,10 @@
+import 'package:clinic_eye/features/payment/controller/payment_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/appointment/controller/appointment_controller.dart';
 import '../../features/patient/controller/patient_controller.dart';
 import '../services/firebase/firebase_service.dart';
 import '../../features/doctor/controller/doctor_controller.dart';
 import '../../features/messaging/services/sms_service.dart';
-import '../../features/payment/services/payment_service.dart';
 
 // Core providers
 final firebaseServiceProvider = Provider<FirebaseService>((ref) {
@@ -26,9 +26,9 @@ final smsServiceProvider = Provider<SmsService>((ref) {
   return SmsService(firebaseService);
 });
 
-final paymentServiceProvider = Provider<PaymentService>((ref) {
+final paymentControllerProvider = Provider<PaymentController>((ref) {
   final firebaseService = ref.watch(firebaseServiceProvider);
-  return PaymentService(firebaseService);
+  return PaymentController(firebaseService);
 });
 
 final doctorControllerProvider = Provider<DoctorController>((ref) {
