@@ -73,12 +73,11 @@ class PaymentController {
         'Authorization': 'Bearer ${PaymentConfig.apiKey}',
       },
       body: jsonEncode({
-        'NotificationOption': 'LNK',
+        'NotificationOption': 'LNK', // Return link only, don't send email/SMS
         'CustomerName': patientName,
         'DisplayCurrencyIso': payment.currency,
         'MobileCountryCode': '+965',
         'CustomerMobile': patientMobile,
-        'CustomerEmail': '',
         'InvoiceValue': payment.amount,
         'CallBackUrl': PaymentConfig.webhookUrl,
         'ErrorUrl': PaymentConfig.webhookUrl,
@@ -93,6 +92,8 @@ class PaymentController {
         ],
       }),
     );
+    print('Response: ${response.body}');
+    print('Status Code: ${response.statusCode}');
 
     if (response.statusCode == 200) {
       final responseData = jsonDecode(response.body);
@@ -168,6 +169,7 @@ class PaymentController {
     }
 
     // Create message text
+    print( 'Create message text for Patient Name: ${patient.name}');
     final messageText = PaymentConfig.paymentMessageTemplate(
       patientName: patient.name,
       appointmentDate: appointmentDate,
@@ -176,13 +178,14 @@ class PaymentController {
     );
 
     // Send SMS
+    print('Sending SMS to ${patient.phone} with message: $messageText');
     final smsService = SmsService(_firebaseService);
     final result = await smsService.sendSms(
-      phoneNumber: patient.phone,
+      phoneNumber: '965${patient.phone}',
       message: messageText,
     );
 
-    if (result) {
+    if (result.isSuccess) {
       // Update payment record as link sent
       await _firebaseService.firestore
           .collection('payments')

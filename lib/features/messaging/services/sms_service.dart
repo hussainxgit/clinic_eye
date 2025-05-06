@@ -1,5 +1,6 @@
 // services/messaging/sms_service.dart
 import 'dart:convert';
+import 'package:clinic_eye/core/models/result.dart';
 import 'package:clinic_eye/features/messaging/model/sms_record.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
@@ -15,12 +16,12 @@ class SmsService {
   SmsService(this._firebaseService) : _httpClient = http.Client();
 
   /// Send an SMS message to a single recipient
-  Future<bool> sendSms({
+  Future<Result<bool>> sendSms({
     required String phoneNumber,
     required String message,
     String? sender,
     int? languageCode,
-    bool isTest = false,
+    bool isTest = SmsConfig.isTest,
   }) async {
     if (phoneNumber.isEmpty) {
       throw Exception('Phone number cannot be empty');
@@ -76,7 +77,7 @@ class SmsService {
               },
             });
 
-        return false;
+        return Result.error(response.errorMessage);
       }
 
       // Update the record with the success result
@@ -97,10 +98,10 @@ class SmsService {
             },
           });
 
-      return true;
+      return Result.success(true);
     } catch (e) {
       print('Error sending SMS: $e');
-      return false;
+      return Result.error(e.toString());
     }
   }
 
@@ -117,6 +118,9 @@ class SmsService {
         Uri.parse(SmsConfig.sendEndpoint),
         body: payload,
       );
+      print(payload);
+      print('Response: ${response.body}');
+      print('Status Code: ${response.statusCode}');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final responseBody = response.body.trim();

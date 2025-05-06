@@ -1,5 +1,4 @@
 import 'package:clinic_eye/core/views/widgets/common/confirm_dialog.dart';
-import 'package:clinic_eye/features/messaging/services/sms_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -282,74 +281,10 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
   void _handleSuccessfulSubmission(Appointment appointment) {
     final isEditing = widget.appointmentId != null;
 
-    // First create payment if needed - do this before navigation
-    if (!isEditing || appointment.paymentStatus == PaymentStatus.unpaid) {
-      showDialog(
-        context: context,
-        builder:
-            (_) => ConfirmDialog(
-              title: 'Appointment Confirmation',
-              content: 'Do you want to proceed with the payment?',
-              confirmText: 'Yes',
-              cancelText: 'No',
-              onConfirm: () async {
-                // Create payment record
-                print('Creating payment record...');
-                final paymentResult = await ref
-                    .read(paymentControllerProvider)
-                    .createPayment(
-                      appointmentId: appointment.id,
-                      amount: 25.0,
-                      patientId: _selectedPatient!.id,
-                      doctorId: appointment.doctorId,
-                    );
-                if (paymentResult.isSuccess) {
-                  final generatePaymentLink = await ref
-                      .read(paymentControllerProvider)
-                      .generatePaymentLink(
-                        paymentId: paymentResult.data!.id,
-                        patientName: appointment.patientName,
-                        patientMobile: _selectedPatient!.phone,
-                      );
-                  if (generatePaymentLink.isSuccess) {
-                    // Send payment link to patient
-
-                    final sendPaymentLink = await ref
-                        .read(paymentControllerProvider)
-                        .sendPaymentLink(paymentId: paymentResult.data!.id);
-                    if (sendPaymentLink.isSuccess) {
-                      _showMessage(
-                        'Payment link has been sent to ${_selectedPatient!.name}',
-                        isError: false,
-                      );
-                      return;
-                    }
-                  }
-
-                  _showMessage(
-                    'Payment link has been sent to ${_selectedPatient!.name}',
-                    isError: false,
-                  );
-                  return;
-                }
-                _showMessage('Failed to create payment record', isError: true);
-              },
-              onCancel: () {
-                // No action needed on cancel
-                _showMessage(
-                  'Appointment created without payment',
-                  isError: false,
-                );
-                Navigator.of(context).pop();
-              },
-            ),
-      );
-    }
-
     // Refresh appointment list
     ref.invalidate(allAppointmentsProvider);
 
-    // Show success message
+    // Show appointment success message
     _showMessage(
       isEditing
           ? 'Appointment updated successfully'
@@ -357,9 +292,83 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
       isError: false,
     );
 
-    
-    // clear form data
+    // Process payment if needed
+    if (!isEditing || appointment.paymentStatus == PaymentStatus.unpaid) {
+      showDialog<bool>(
+        context: context,
+        builder:
+            (dialogContext) => ConfirmDialog(
+              title: 'Appointment Confirmation',
+              content: 'Do you want to proceed with the payment?',
+              confirmText: 'Yes',
+              cancelText: 'No',
+              onConfirm: () async {
+                await _processPayment(appointment);
+              },
+              onCancel: () {
+                _showMessage(
+                  'Appointment created without payment',
+                  isError: false,
+                );
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+      );
+    }
+
+    // Clear form data
     ref.read(appointmentFormProvider.notifier).state = AppointmentFormData();
+  }
+
+  // Extract payment processing to a separate method
+  Future<void> _processPayment(Appointment appointment) async {
+    setState(() => _isLoading = true);
+
+    try {
+      // Create payment record
+      final paymentResult = await ref
+          .read(paymentControllerProvider)
+          .createPayment(
+            appointmentId: appointment.id,
+            amount: 25.0,
+            patientId: _selectedPatient!.id,
+            doctorId: appointment.doctorId,
+          );
+
+      if (!paymentResult.isSuccess) {
+        _showMessage('Failed to create payment record', isError: true);
+        return;
+      }
+
+      // Generate payment link
+      final generateResult = await ref
+          .read(paymentControllerProvider)
+          .generatePaymentLink(
+            paymentId: paymentResult.data!.id,
+            patientName: appointment.patientName,
+            patientMobile: _selectedPatient!.phone,
+          );
+
+      if (!generateResult.isSuccess) {
+        _showMessage('Failed to generate payment link', isError: true);
+        return;
+      }
+
+      // Send payment link
+      final sendResult = await ref
+          .read(paymentControllerProvider)
+          .sendPaymentLink(paymentId: paymentResult.data!.id);
+      if (sendResult.isSuccess) {
+        _showMessage(
+          'Payment link generated and SMS sent successfully',
+          isError: false,
+        );
+      }
+    } catch (e) {
+      _showMessage('Error processing payment: ${e.toString()}', isError: true);
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   // Unified message display method

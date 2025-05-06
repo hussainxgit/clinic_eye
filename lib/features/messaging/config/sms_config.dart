@@ -14,6 +14,7 @@ class SmsConfig {
   static const int arabicCP1256 = 2; // Arabic (CP1256)
   static const int arabicUTF8 = 3; // Arabic (UTF-8)
   static const int unicode = 4; // Unicode
+  static const bool isTest = false; // Test mode
 
   // API endpoints
   static const String sendEndpoint = 'https://www.kwtsms.com/API/send/';
