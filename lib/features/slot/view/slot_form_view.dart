@@ -335,7 +335,7 @@ class SlotFormView extends ConsumerWidget {
 
     if (result.isSuccess) {
       // Refresh the slots list
-      ref.refresh(doctorSlotsProvider(doctorId));
+      ref.invalidate(doctorSlotsProvider(doctorId));
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -482,7 +482,7 @@ class _ExistingSlotsView extends ConsumerWidget {
 
                   if (result.isSuccess) {
                     // Refresh the slots list
-                    ref.refresh(doctorSlotsProvider(doctorId));
+                    ref.invalidate(doctorSlotsProvider(doctorId));
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -508,7 +508,7 @@ class _ExistingSlotsView extends ConsumerWidget {
 
                 if (result.isSuccess) {
                   // Refresh the slots list
-                  ref.refresh(doctorSlotsProvider(doctorId));
+                  ref.invalidate(doctorSlotsProvider(doctorId));
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(

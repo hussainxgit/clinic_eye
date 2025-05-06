@@ -1,3 +1,5 @@
+import 'package:clinic_eye/core/config/dependencies.dart';
+import 'package:clinic_eye/core/views/widgets/common/confirm_dialog.dart';
 import 'package:clinic_eye/features/appointment/view/appointment_form_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -257,40 +259,40 @@ class AppointmentListWithFilter extends ConsumerWidget {
     showDialog(
       context: context,
       builder:
-          (context) => AlertDialog(
-            title: const Text('Delete Appointment'),
-            content: Text(
-              'Are you sure you want to delete appointment with ${appointment.patientName} on ${appointment.dateTime.day}/${appointment.dateTime.month}/${appointment.dateTime.year}?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  // ref
-                  //     .read(appointmentControllerProvider)
-                  //     .deleteAppointment(appointment.id)
-                  //     .then((result) {
-                  //       ScaffoldMessenger.of(context).showSnackBar(
-                  //         SnackBar(
-                  //           content: Text(
-                  //             result.isSuccess
-                  //                 ? 'Appointment deleted successfully'
-                  //                 : 'Error: ${result.errorMessage}',
-                  //           ),
-                  //           backgroundColor:
-                  //               result.isSuccess ? Colors.green : Colors.red,
-                  //         ),
-                  //       );
-                  //     });
-                },
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('Delete'),
-              ),
-            ],
+          (context) => ConfirmDialog(
+            title: 'Delete Appointment',
+            content:
+                'Are you sure you want to delete appointment with ${appointment.patientName} on ${appointment.dateTime.day}/${appointment.dateTime.month}/${appointment.dateTime.year}?',
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            onConfirm: () {
+              // Call the delete method from the appointment controller
+              ref
+                  .read(appointmentControllerProvider)
+                  .cancelAppointment(appointment.id)
+                  .then((result) {
+                    if (result.isSuccess) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Appointment deleted')),
+                        );
+                        Navigator.of(context).pop(); // Close the dialog
+                        ref.invalidate(allAppointmentsProvider); // Refresh the list
+                      }
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: ${result.errorMessage}'),
+                          ),
+                        );
+                      }
+                    }
+                  });
+            },
+            onCancel: () {
+              Navigator.of(context).pop();
+            },
           ),
     );
   }

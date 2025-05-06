@@ -1,3 +1,5 @@
+import 'package:clinic_eye/core/views/widgets/common/confirm_dialog.dart';
+import 'package:clinic_eye/features/messaging/services/sms_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -24,7 +26,7 @@ class AppointmentFormData {
   final DateTime? date;
   final TimeSlot? timeSlot;
   final String notes;
-  
+
   AppointmentFormData({
     this.patientId,
     this.doctorId,
@@ -32,7 +34,7 @@ class AppointmentFormData {
     this.timeSlot,
     this.notes = '',
   });
-  
+
   AppointmentFormData copyWith({
     String? patientId,
     String? doctorId,
@@ -48,12 +50,9 @@ class AppointmentFormData {
       notes: notes ?? this.notes,
     );
   }
-  
-  bool get isValid => 
-    patientId != null && 
-    doctorId != null && 
-    date != null && 
-    timeSlot != null;
+
+  bool get isValid =>
+      patientId != null && doctorId != null && date != null && timeSlot != null;
 }
 
 class AppointmentFormView extends ConsumerStatefulWidget {
@@ -62,13 +61,14 @@ class AppointmentFormView extends ConsumerStatefulWidget {
   const AppointmentFormView({super.key, this.appointmentId});
 
   @override
-  ConsumerState<AppointmentFormView> createState() => _AppointmentFormViewState();
+  ConsumerState<AppointmentFormView> createState() =>
+      _AppointmentFormViewState();
 }
 
 class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _notesController = TextEditingController();
-  
+
   bool _isLoading = false;
   List<TimeSlot> _availableTimeSlots = [];
   Patient? _selectedPatient;
@@ -76,7 +76,7 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
   @override
   void initState() {
     super.initState();
-    
+
     // If editing existing appointment, load its data
     if (widget.appointmentId != null) {
       _loadAppointmentData();
@@ -95,7 +95,7 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
       if (appointmentResult.isSuccess && appointmentResult.data != null) {
         final appointment = appointmentResult.data!;
         final formData = ref.read(appointmentFormProvider.notifier);
-        
+
         // Update form state
         formData.state = AppointmentFormData(
           patientId: appointment.patientId,
@@ -103,20 +103,20 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
           date: appointment.dateTime,
           notes: appointment.notes ?? '',
         );
-        
+
         // Update notes controller
         _notesController.text = appointment.notes ?? '';
 
         // Load time slots
         await _loadTimeSlots();
-        
+
         // Find the selected time slot
         if (_availableTimeSlots.isNotEmpty) {
           TimeSlot? selectedSlot = _availableTimeSlots.firstWhere(
             (slot) => slot.id == appointment.timeSlotId,
             orElse: () => _availableTimeSlots.first,
           );
-          
+
           // Update the time slot in the form data
           formData.state = formData.state.copyWith(timeSlot: selectedSlot);
         }
@@ -131,7 +131,7 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
   // Load available time slots for selected doctor and date
   Future<void> _loadTimeSlots() async {
     final formData = ref.read(appointmentFormProvider);
-    
+
     if (formData.doctorId == null || formData.date == null) {
       setState(() => _availableTimeSlots = []);
       return;
@@ -159,7 +159,7 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
   // Submit form - simplified with clear steps
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     final formData = ref.read(appointmentFormProvider);
     if (!formData.isValid) {
       _showMessage('Please complete all required fields', isError: true);
@@ -167,36 +167,39 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
     }
 
     setState(() => _isLoading = true);
-    
+
     try {
       // Get detailed patient and doctor objects
       _selectedPatient = await _getPatientById(formData.patientId!);
       final doctor = await _getDoctorById(formData.doctorId!);
-      
+
       if (_selectedPatient == null || doctor == null) {
         _showMessage('Could not find patient or doctor details', isError: true);
         return;
       }
-      
+
       // Create appointment object
       final appointment = _createAppointmentObject(
         patientId: _selectedPatient!.id,
         patientName: _selectedPatient!.name,
-        doctorId: doctor.id, 
+        doctorId: doctor.id,
         doctorName: doctor.name,
-        formData: formData
+        formData: formData,
       );
-      
+
       // Submit to backend
       final result = await _submitAppointment(appointment);
-      
+
       if (!mounted) return;
-      
+
       if (result.isSuccess && result.data != null) {
         // Handle successful submission
         _handleSuccessfulSubmission(result.data!);
       } else {
-        _showMessage(result.errorMessage ?? 'Failed to save appointment', isError: true);
+        _showMessage(
+          result.errorMessage ?? 'Failed to save appointment',
+          isError: true,
+        );
       }
     } catch (e) {
       _showMessage('Error processing appointment', isError: true);
@@ -209,26 +212,26 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
   Future<Patient?> _getPatientById(String patientId) async {
     final patientsResult = ref.read(getAllPatientsProvider).value;
     if (patientsResult == null || !patientsResult.isSuccess) return null;
-    
+
     final patients = patientsResult.data ?? [];
     return patients.firstWhere(
       (p) => p.id == patientId,
       orElse: () => throw Exception('Patient not found'),
     );
   }
-  
+
   // Helper method to get doctor by ID
   Future<Doctor?> _getDoctorById(String doctorId) async {
     final doctorsResult = ref.read(getAllDoctorsProvider).value;
     if (doctorsResult == null || !doctorsResult.isSuccess) return null;
-    
+
     final doctors = doctorsResult.data ?? [];
     return doctors.firstWhere(
       (d) => d.id == doctorId,
       orElse: () => throw Exception('Doctor not found'),
     );
   }
-  
+
   // Create appointment object
   Appointment _createAppointmentObject({
     required String patientId,
@@ -257,76 +260,112 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
       notes: formData.notes.isNotEmpty ? formData.notes : null,
     );
   }
-  
+
   // Submit appointment to backend
-  Future<Result<Appointment>> _submitAppointment(Appointment appointment) async {
+  Future<Result<Appointment>> _submitAppointment(
+    Appointment appointment,
+  ) async {
     final isEditing = widget.appointmentId != null;
-    
+
     if (isEditing) {
-      return ref.read(appointmentControllerProvider).updateAppointment(appointment);
+      return ref
+          .read(appointmentControllerProvider)
+          .updateAppointment(appointment);
     } else {
-      return ref.read(appointmentControllerProvider).createAppointment(appointment);
+      return ref
+          .read(appointmentControllerProvider)
+          .createAppointment(appointment);
     }
   }
-  
+
   // Handle successful submission
   void _handleSuccessfulSubmission(Appointment appointment) {
     final isEditing = widget.appointmentId != null;
-    
+
     // First create payment if needed - do this before navigation
     if (!isEditing || appointment.paymentStatus == PaymentStatus.unpaid) {
-      _createPaymentRecord(appointment);
+      showDialog(
+        context: context,
+        builder:
+            (_) => ConfirmDialog(
+              title: 'Appointment Confirmation',
+              content: 'Do you want to proceed with the payment?',
+              confirmText: 'Yes',
+              cancelText: 'No',
+              onConfirm: () async {
+                // Create payment record
+                print('Creating payment record...');
+                final paymentResult = await ref
+                    .read(paymentControllerProvider)
+                    .createPayment(
+                      appointmentId: appointment.id,
+                      amount: 25.0,
+                      patientId: _selectedPatient!.id,
+                      doctorId: appointment.doctorId,
+                    );
+                if (paymentResult.isSuccess) {
+                  final generatePaymentLink = await ref
+                      .read(paymentControllerProvider)
+                      .generatePaymentLink(
+                        paymentId: paymentResult.data!.id,
+                        patientName: appointment.patientName,
+                        patientMobile: _selectedPatient!.phone,
+                      );
+                  if (generatePaymentLink.isSuccess) {
+                    // Send payment link to patient
+
+                    final sendPaymentLink = await ref
+                        .read(paymentControllerProvider)
+                        .sendPaymentLink(paymentId: paymentResult.data!.id);
+                    if (sendPaymentLink.isSuccess) {
+                      _showMessage(
+                        'Payment link has been sent to ${_selectedPatient!.name}',
+                        isError: false,
+                      );
+                      return;
+                    }
+                  }
+
+                  _showMessage(
+                    'Payment link has been sent to ${_selectedPatient!.name}',
+                    isError: false,
+                  );
+                  return;
+                }
+                _showMessage('Failed to create payment record', isError: true);
+              },
+              onCancel: () {
+                // No action needed on cancel
+                _showMessage(
+                  'Appointment created without payment',
+                  isError: false,
+                );
+                Navigator.of(context).pop();
+              },
+            ),
+      );
     }
-    
+
     // Refresh appointment list
     ref.invalidate(allAppointmentsProvider);
-    
+
     // Show success message
     _showMessage(
-      isEditing ? 'Appointment updated successfully' : 'Appointment created successfully',
-      isError: false
+      isEditing
+          ? 'Appointment updated successfully'
+          : 'Appointment created successfully',
+      isError: false,
     );
-    
-    // Navigate back - do this last after payment creation
-    Navigator.of(context).pop();
-  }
 
-  // Create payment record in a clean, simplified manner
-  Future<void> _createPaymentRecord(Appointment appointment) async {
-    if (_selectedPatient == null || !mounted) return;
     
-    try {
-      // Capture controller and patient info before potential async gaps
-      final paymentController = ref.read(paymentControllerProvider);
-      final patient = _selectedPatient!;
-      
-      // Step 1: Create payment record
-      final paymentResult = await paymentController.createPayment(
-        appointmentId: appointment.id,
-        patientId: appointment.patientId,
-        doctorId: appointment.doctorId,
-        amount: 25.0, // Consider making this dynamic based on appointment type
-      );
-      
-      if (!paymentResult.isSuccess || paymentResult.data == null || !mounted) return;
-      
-      // Step 2: Generate payment link - check mounted again
-      await paymentController.generatePaymentLink(
-        paymentResult.data!.id,
-        patient.name,
-        patient.phone,
-      );
-      
-    } catch (e) {
-      // Payment errors shouldn't block the appointment flow
-      debugPrint('Error creating payment: ${e.toString()}');
-    }
+    // clear form data
+    ref.read(appointmentFormProvider.notifier).state = AppointmentFormData();
   }
 
   // Unified message display method
   void _showMessage(String message, {required bool isError}) {
     if (!mounted) return;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -339,86 +378,93 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
   Widget build(BuildContext context) {
     // Watch form state from provider
     final formData = ref.watch(appointmentFormProvider);
-    
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.appointmentId != null ? 'Edit Appointment' : 'Book New Appointment'),
+        title: Text(
+          widget.appointmentId != null
+              ? 'Edit Appointment'
+              : 'Book New Appointment',
+        ),
       ),
-      body: _isLoading
-        ? const Center(child: CircularProgressIndicator())
-        : SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.appointmentId != null
-                        ? 'Edit Appointment Details'
-                        : 'Book New Appointment',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const Divider(),
-                  const SizedBox(height: 16.0),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.appointmentId != null
+                            ? 'Edit Appointment Details'
+                            : 'Book New Appointment',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const Divider(),
+                      const SizedBox(height: 16.0),
 
-                  // Patient Selection
-                  _buildSectionTitle(context, 'Select Patient'),
-                  _buildPatientDropdown(formData.patientId),
-                  const SizedBox(height: 24.0),
+                      // Patient Selection
+                      _buildSectionTitle(context, 'Select Patient'),
+                      _buildPatientDropdown(formData.patientId),
+                      const SizedBox(height: 24.0),
 
-                  // Doctor Selection
-                  _buildSectionTitle(context, 'Select Doctor'),
-                  _buildDoctorDropdown(formData.doctorId),
-                  const SizedBox(height: 24.0),
+                      // Doctor Selection
+                      _buildSectionTitle(context, 'Select Doctor'),
+                      _buildDoctorDropdown(formData.doctorId),
+                      const SizedBox(height: 24.0),
 
-                  // Date Selection
-                  _buildSectionTitle(context, 'Select Date'),
-                  _buildDatePicker(formData.date),
-                  const SizedBox(height: 24.0),
+                      // Date Selection
+                      _buildSectionTitle(context, 'Select Date'),
+                      _buildDatePicker(formData.date),
+                      const SizedBox(height: 24.0),
 
-                  // Time Slot Selection
-                  if (formData.doctorId != null && formData.date != null) ...[
-                    _buildSectionTitle(context, 'Select Time Slot'),
-                    _buildTimeSlotSelection(formData.timeSlot),
-                    const SizedBox(height: 24.0),
-                  ],
+                      // Time Slot Selection
+                      if (formData.doctorId != null &&
+                          formData.date != null) ...[
+                        _buildSectionTitle(context, 'Select Time Slot'),
+                        _buildTimeSlotSelection(formData.timeSlot),
+                        const SizedBox(height: 24.0),
+                      ],
 
-                  // Notes
-                  _buildSectionTitle(context, 'Notes'),
-                  TextFormField(
-                    controller: _notesController,
-                    decoration: const InputDecoration(
-                      hintText: 'Add any additional notes here...',
-                    ),
-                    maxLines: 3,
-                    onChanged: (value) {
-                      ref.read(appointmentFormProvider.notifier).state = 
-                          formData.copyWith(notes: value);
-                    },
-                  ),
-                  const SizedBox(height: 32.0),
+                      // Notes
+                      _buildSectionTitle(context, 'Notes'),
+                      TextFormField(
+                        controller: _notesController,
+                        decoration: const InputDecoration(
+                          hintText: 'Add any additional notes here...',
+                        ),
+                        maxLines: 3,
+                        onChanged: (value) {
+                          ref
+                              .read(appointmentFormProvider.notifier)
+                              .state = formData.copyWith(notes: value);
+                        },
+                      ),
+                      const SizedBox(height: 32.0),
 
-                  // Submit Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _handleSubmit,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12.0),
-                        child: Text(
-                          widget.appointmentId != null
-                              ? 'Update Appointment'
-                              : 'Book Appointment',
-                          style: const TextStyle(fontSize: 16),
+                      // Submit Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _handleSubmit,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12.0),
+                            child: Text(
+                              widget.appointmentId != null
+                                  ? 'Update Appointment'
+                                  : 'Book Appointment',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
     );
   }
 
@@ -426,10 +472,7 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleLarge,
-      ),
+      child: Text(title, style: Theme.of(context).textTheme.titleLarge),
     );
   }
 
@@ -437,7 +480,7 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
     return Consumer(
       builder: (context, ref, child) {
         final patientsAsyncValue = ref.watch(getAllPatientsProvider);
-        
+
         return patientsAsyncValue.when(
           data: (result) {
             if (!result.isSuccess) {
@@ -453,18 +496,22 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
               value: selectedPatientId,
               decoration: InputDecoration(
                 hintText: 'Select a patient',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              items: patients.map((patient) {
-                return DropdownMenuItem<String>(
-                  value: patient.id,
-                  child: Text(patient.name),
-                );
-              }).toList(),
+              items:
+                  patients.map((patient) {
+                    return DropdownMenuItem<String>(
+                      value: patient.id,
+                      child: Text(patient.name),
+                    );
+                  }).toList(),
               onChanged: (value) {
                 if (value != null) {
-                  ref.read(appointmentFormProvider.notifier).state = 
-                      ref.read(appointmentFormProvider).copyWith(patientId: value);
+                  ref.read(appointmentFormProvider.notifier).state = ref
+                      .read(appointmentFormProvider)
+                      .copyWith(patientId: value);
                 }
               },
             );
@@ -480,7 +527,7 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
     return Consumer(
       builder: (context, ref, child) {
         final doctorsAsyncValue = ref.watch(getAllDoctorsProvider);
-        
+
         return doctorsAsyncValue.when(
           data: (result) {
             if (!result.isSuccess) {
@@ -493,7 +540,8 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
             }
 
             // Filter available doctors
-            final availableDoctors = doctors.where((doctor) => doctor.isAvailable).toList();
+            final availableDoctors =
+                doctors.where((doctor) => doctor.isAvailable).toList();
             if (availableDoctors.isEmpty) {
               return const Text('No available doctors');
             }
@@ -502,23 +550,24 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
               value: selectedDoctorId,
               decoration: InputDecoration(
                 hintText: 'Select a doctor',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              items: availableDoctors.map((doctor) {
-                return DropdownMenuItem<String>(
-                  value: doctor.id,
-                  child: Text('${doctor.name} (${doctor.specialty})'),
-                );
-              }).toList(),
+              items:
+                  availableDoctors.map((doctor) {
+                    return DropdownMenuItem<String>(
+                      value: doctor.id,
+                      child: Text('${doctor.name} (${doctor.specialty})'),
+                    );
+                  }).toList(),
               onChanged: (value) {
                 if (value != null) {
                   // Update form data
-                  ref.read(appointmentFormProvider.notifier).state = 
-                      ref.read(appointmentFormProvider).copyWith(
-                        doctorId: value,
-                        timeSlot: null
-                      );
-                  
+                  ref.read(appointmentFormProvider.notifier).state = ref
+                      .read(appointmentFormProvider)
+                      .copyWith(doctorId: value, timeSlot: null);
+
                   // Load time slots if date is selected
                   final formData = ref.read(appointmentFormProvider);
                   if (formData.date != null) {
@@ -549,12 +598,10 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
 
         if (picked != null && picked != selectedDate) {
           // Update form data
-          ref.read(appointmentFormProvider.notifier).state = 
-              ref.read(appointmentFormProvider).copyWith(
-                date: picked,
-                timeSlot: null
-              );
-          
+          ref.read(appointmentFormProvider.notifier).state = ref
+              .read(appointmentFormProvider)
+              .copyWith(date: picked, timeSlot: null);
+
           // Load time slots if doctor is selected
           final formData = ref.read(appointmentFormProvider);
           if (formData.doctorId != null) {
@@ -599,42 +646,47 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
     return Wrap(
       spacing: 8.0,
       runSpacing: 8.0,
-      children: _availableTimeSlots.map((slot) {
-        final isSelected = selectedTimeSlot?.id == slot.id;
-        final startTime = slot.startTime;
-        final endTime = slot.endTime;
+      children:
+          _availableTimeSlots.map((slot) {
+            final isSelected = selectedTimeSlot?.id == slot.id;
+            final startTime = slot.startTime;
+            final endTime = slot.endTime;
 
-        return ChoiceChip(
-          label: Text(
-            '${_formatTimeOfDay(startTime)} - ${_formatTimeOfDay(endTime)}',
-          ),
-          selected: isSelected,
-          onSelected: slot.isAvailable
-              ? (selected) {
-                  if (selected) {
-                    ref.read(appointmentFormProvider.notifier).state = 
-                        ref.read(appointmentFormProvider).copyWith(timeSlot: slot);
-                  }
-                }
-              : null,
-          backgroundColor: Colors.grey[200],
-          selectedColor: Theme.of(context).colorScheme.primary,
-          labelStyle: TextStyle(
-            color: isSelected
-                ? Colors.white
-                : slot.isAvailable
-                    ? Colors.black
-                    : Colors.grey,
-          ),
-        );
-      }).toList(),
+            return ChoiceChip(
+              label: Text(
+                '${_formatTimeOfDay(startTime)} - ${_formatTimeOfDay(endTime)}',
+              ),
+              selected: isSelected,
+              onSelected:
+                  slot.isAvailable
+                      ? (selected) {
+                        if (selected) {
+                          ref.read(appointmentFormProvider.notifier).state = ref
+                              .read(appointmentFormProvider)
+                              .copyWith(timeSlot: slot);
+                        }
+                      }
+                      : null,
+              backgroundColor: Colors.grey[200],
+              selectedColor: Theme.of(context).colorScheme.primary,
+              labelStyle: TextStyle(
+                color:
+                    isSelected
+                        ? Colors.white
+                        : slot.isAvailable
+                        ? Colors.black
+                        : Colors.grey,
+              ),
+            );
+          }).toList(),
     );
   }
 
   String _formatTimeOfDay(TimeOfDay time) {
-    final hour = time.hour == 0
-        ? 12
-        : time.hour > 12
+    final hour =
+        time.hour == 0
+            ? 12
+            : time.hour > 12
             ? time.hour - 12
             : time.hour;
 

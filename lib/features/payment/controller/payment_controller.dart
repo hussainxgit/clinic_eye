@@ -55,11 +55,11 @@ class PaymentController {
   }
 
   // Generate payment link via MyFatoorah API
-  Future<Result<Payment>> generatePaymentLink(
-    String paymentId,
-    String patientName,
-    String patientMobile,
-  ) async {
+  Future<Result<Payment>> generatePaymentLink({
+    required String paymentId,
+    required String patientName,
+    required String patientMobile,
+  }) async {
     final payment = await _getPaymentById(paymentId);
     if (payment == null) {
       throw Exception('Payment not found');
@@ -127,7 +127,9 @@ class PaymentController {
   }
 
   // Send payment link via SMS/WhatsApp
-  Future<bool> sendPaymentLink(String paymentId, SmsService smsService) async {
+  Future<Result<bool>> sendPaymentLink({
+    required String paymentId,
+  }) async {
     final payment = await _getPaymentById(paymentId);
     if (payment == null || payment.paymentLink == null) {
       throw Exception('Payment or payment link not found');
@@ -174,6 +176,7 @@ class PaymentController {
     );
 
     // Send SMS
+    final smsService = SmsService(_firebaseService);
     final result = await smsService.sendSms(
       phoneNumber: patient.phone,
       message: messageText,
@@ -193,7 +196,7 @@ class PaymentController {
           });
     }
 
-    return result;
+    return Result.success(true);
   }
 
   // Check payment status
