@@ -9,11 +9,11 @@ import '../model/sms_response.dart';
 import '../../../core/services/firebase/firebase_service.dart';
 import '../config/sms_config.dart';
 
-class SmsService {
+class MessegingController {
   final FirebaseService _firebaseService;
   final http.Client _httpClient;
 
-  SmsService(this._firebaseService) : _httpClient = http.Client();
+  MessegingController(this._firebaseService) : _httpClient = http.Client();
 
   /// Send an SMS message to a single recipient
   Future<Result<bool>> sendSms({

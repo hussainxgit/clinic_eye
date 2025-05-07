@@ -4,11 +4,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import '../../messaging/controller/messeging_controller.dart';
 import '../config/payment_config.dart';
 import '../../patient/model/patient.dart';
 import '../model/payment.dart';
 import '../../../core/services/firebase/firebase_service.dart';
-import '../../messaging/services/sms_service.dart';
 
 class PaymentController {
   final FirebaseService _firebaseService;
@@ -179,8 +179,8 @@ class PaymentController {
 
     // Send SMS
     print('Sending SMS to ${patient.phone} with message: $messageText');
-    final smsService = SmsService(_firebaseService);
-    final result = await smsService.sendSms(
+    final messegingController = MessegingController(_firebaseService);
+    final result = await messegingController.sendSms(
       phoneNumber: '965${patient.phone}',
       message: messageText,
     );
