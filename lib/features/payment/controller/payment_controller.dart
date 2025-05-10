@@ -203,12 +203,16 @@ class PaymentController {
   }
 
   // Check payment status
-  Future<PaymentStatus> checkPaymentStatus(String paymentId) async {
+  Future<Result<PaymentStatus>> checkPaymentStatus(String paymentId) async {
     final payment = await _getPaymentById(paymentId);
     if (payment == null || payment.invoiceId == null) {
       throw Exception('Payment or invoice ID not found');
     }
-
+    // Check if payment status is already successful
+    if (payment.status == PaymentStatus.successful) {
+      return Result.success(payment.status);
+    }
+    // Check payment status via MyFatoorah API
     final url = '${PaymentConfig.baseUrl}/v2/GetPaymentStatus';
     final response = await _httpClient.post(
       Uri.parse(url),
@@ -218,13 +222,11 @@ class PaymentController {
       },
       body: jsonEncode({'Key': payment.invoiceId, 'KeyType': 'InvoiceId'}),
     );
-
     if (response.statusCode == 200) {
       final responseData = jsonDecode(response.body);
       if (responseData['IsSuccess'] == true) {
         final data = responseData['Data'];
         final invoiceStatus = data['InvoiceStatus'];
-        final transactionId = data['InvoiceTransactions']?[0]?['TransactionId'];
 
         final newStatus = _mapInvoiceStatus(invoiceStatus);
 
@@ -233,7 +235,7 @@ class PaymentController {
           await _updatePaymentStatus(
             payment.id,
             newStatus,
-            transactionId?.toString(),
+            data['TransactionId']?.toString(),
           );
 
           // If payment is successful, update the appointment payment status
@@ -241,8 +243,7 @@ class PaymentController {
             await _updateAppointmentPaymentStatus(payment.appointmentId);
           }
         }
-
-        return newStatus;
+        return Result.success(newStatus);
       } else {
         throw Exception(
           responseData['Message'] ?? 'Failed to check payment status',

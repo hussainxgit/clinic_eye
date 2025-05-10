@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/views/widgets/common/generic_filter_dialog.dart';
 import '../model/appointment.dart';
 import '../provider/appointment_provider.dart';
+import 'appointment_details_view.dart';
 
 // StateProvider to hold the current filter values
 final appointmentFiltersProvider = StateProvider<Map<String, dynamic>>(
@@ -176,14 +177,14 @@ class AppointmentListWithFilter extends ConsumerWidget {
                   return AppointmentListItem(
                     appointment: appointment,
                     onTap: () {
-                      // Navigator.of(context).push(
-                      //   MaterialPageRoute(
-                      //     builder:
-                      //         (_) => EditAppointmentFormView(
-                      //           appointmentId: appointment.id,
-                      //         ),
-                      //   ),
-                      // );
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder:
+                              (_) => AppointmentDetailsView(
+                                appointmentId: appointment.id,
+                              ),
+                        ),
+                      );
                     },
                     onDelete: () => _confirmDelete(context, ref, appointment),
                   );

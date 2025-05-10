@@ -13,6 +13,59 @@ import 'package:intl/intl.dart';
 import '../../../core/config/dependencies.dart';
 import '../../patient/provider/patient_provider.dart';
 
+// Extensions for AppointmentStatus
+extension AppointmentStatusX on appointment_model.AppointmentStatus {
+  Color get color {
+    switch (this) {
+      case appointment_model.AppointmentStatus.scheduled:
+        return Colors.blue;
+      case appointment_model.AppointmentStatus.completed:
+        return Colors.green;
+      case appointment_model.AppointmentStatus.cancelled:
+        return Colors.red;
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case appointment_model.AppointmentStatus.scheduled:
+        return Icons.schedule;
+      case appointment_model.AppointmentStatus.completed:
+        return Icons.check_circle;
+      case appointment_model.AppointmentStatus.cancelled:
+        return Icons.cancel;
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case appointment_model.AppointmentStatus.scheduled:
+        return 'This appointment is scheduled and confirmed';
+      case appointment_model.AppointmentStatus.completed:
+        return 'This appointment has been completed';
+      case appointment_model.AppointmentStatus.cancelled:
+        return 'This appointment has been cancelled';
+    }
+  }
+}
+
+// Extensions for PaymentStatus
+extension PaymentStatusX on PaymentStatus {
+  Color get color {
+    switch (this) {
+      case PaymentStatus.successful:
+        return Colors.green;
+      case PaymentStatus.failed:
+      case PaymentStatus.cancelled:
+        return Colors.red;
+      case PaymentStatus.refunded:
+        return Colors.amber;
+      case PaymentStatus.pending:
+        return Colors.blue;
+    }
+  }
+}
+
 // Provider to fetch appointment details
 final appointmentDetailsProvider =
     FutureProvider.family<Result<appointment_model.Appointment>, String>((
@@ -78,12 +131,13 @@ class AppointmentDetailsView extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('appointment_model.Appointment Details'),
+        title: const Text('Appointment Details'),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
-            tooltip: 'Edit appointment_model.Appointment',
-            onPressed: () => _navigateToEditAppointment(context, appointmentId),
+            tooltip: 'Edit Appointment',
+            onPressed:
+                () => _navigateToEditAppointment(context, ref, appointmentId),
           ),
         ],
       ),
@@ -92,7 +146,6 @@ class AppointmentDetailsView extends ConsumerWidget {
           if (!result.isSuccess) {
             return Center(child: Text('Error: ${result.errorMessage}'));
           }
-
           final appointment = result.data!;
           return _buildAppointmentDetails(context, ref, appointment);
         },
@@ -111,8 +164,6 @@ class AppointmentDetailsView extends ConsumerWidget {
       appointmentPatientProvider(appointment.patientId),
     );
     final paymentAsync = ref.watch(appointmentPaymentProvider(appointment.id));
-
-    // Date formatting
     final dateFormat = DateFormat('EEEE, MMMM d, yyyy');
     final timeFormat = DateFormat('h:mm a');
 
@@ -121,11 +172,8 @@ class AppointmentDetailsView extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // appointment_model.Appointment Status Card
           _buildStatusCard(context, appointment),
           const SizedBox(height: 24),
-
-          // Main Details
           Card(
             elevation: 2,
             child: Padding(
@@ -134,13 +182,11 @@ class AppointmentDetailsView extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'appointment_model.Appointment Information',
+                    'Appointment Information',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const Divider(),
                   const SizedBox(height: 8),
-
-                  // Date and Time
                   Row(
                     children: [
                       const Icon(Icons.calendar_today, size: 20),
@@ -174,8 +220,6 @@ class AppointmentDetailsView extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  // Doctor Information
                   Row(
                     children: [
                       const Icon(Icons.medical_services, size: 20),
@@ -194,8 +238,6 @@ class AppointmentDetailsView extends ConsumerWidget {
                       ),
                     ],
                   ),
-
-                  // Notes if available
                   if (appointment.notes != null &&
                       appointment.notes!.isNotEmpty) ...[
                     const SizedBox(height: 16),
@@ -220,8 +262,6 @@ class AppointmentDetailsView extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-
-          // Patient Information
           patientAsync.when(
             data:
                 (patient) =>
@@ -249,8 +289,6 @@ class AppointmentDetailsView extends ConsumerWidget {
                 ),
           ),
           const SizedBox(height: 24),
-
-          // Payment Information
           paymentAsync.when(
             data:
                 (payment) =>
@@ -273,8 +311,6 @@ class AppointmentDetailsView extends ConsumerWidget {
                 ),
           ),
           const SizedBox(height: 24),
-
-          // Action Buttons
           _buildActionButtons(context, ref, appointment),
         ],
       ),
@@ -285,23 +321,9 @@ class AppointmentDetailsView extends ConsumerWidget {
     BuildContext context,
     appointment_model.Appointment appointment,
   ) {
-    Color statusColor;
-    IconData statusIcon;
-
-    switch (appointment.status) {
-      case appointment_model.AppointmentStatus.scheduled:
-        statusColor = Colors.blue;
-        statusIcon = Icons.schedule;
-        break;
-      case appointment_model.AppointmentStatus.completed:
-        statusColor = Colors.green;
-        statusIcon = Icons.check_circle;
-        break;
-      case appointment_model.AppointmentStatus.cancelled:
-        statusColor = Colors.red;
-        statusIcon = Icons.cancel;
-        break;
-    }
+    final statusColor = appointment.status.color;
+    final statusIcon = appointment.status.icon;
+    final statusDescription = appointment.status.description;
 
     return Card(
       elevation: 3,
@@ -318,7 +340,7 @@ class AppointmentDetailsView extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Status: ${appointment.status.toString().split('.').last}',
+                    'Status: ${appointment.status.name.toUpperCase()}',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: statusColor,
                       fontWeight: FontWeight.bold,
@@ -326,13 +348,7 @@ class AppointmentDetailsView extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    appointment.status ==
-                            appointment_model.AppointmentStatus.scheduled
-                        ? 'This appointment is scheduled and confirmed'
-                        : appointment.status ==
-                            appointment_model.AppointmentStatus.completed
-                        ? 'This appointment has been completed'
-                        : 'This appointment has been cancelled',
+                    statusDescription,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
@@ -439,23 +455,7 @@ class AppointmentDetailsView extends ConsumerWidget {
     appointment_model.Appointment appointment,
   ) {
     final dateFormat = DateFormat('MMM d, yyyy');
-
-    Color statusColor;
-    switch (payment.status) {
-      case PaymentStatus.successful:
-        statusColor = Colors.green;
-        break;
-      case PaymentStatus.failed:
-      case PaymentStatus.cancelled:
-        statusColor = Colors.red;
-        break;
-      case PaymentStatus.refunded:
-        statusColor = Colors.amber;
-        break;
-      case PaymentStatus.pending:
-        statusColor = Colors.blue;
-        break;
-    }
+    final statusColor = payment.status.color;
 
     return Card(
       elevation: 2,
@@ -470,8 +470,6 @@ class AppointmentDetailsView extends ConsumerWidget {
             ),
             const Divider(),
             const SizedBox(height: 8),
-
-            // Amount and Currency
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -485,8 +483,6 @@ class AppointmentDetailsView extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 8),
-
-            // Payment Status
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -501,7 +497,7 @@ class AppointmentDetailsView extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    payment.status.toString().split('.').last.toUpperCase(),
+                    payment.status.name.toUpperCase(),
                     style: TextStyle(
                       color: statusColor,
                       fontWeight: FontWeight.bold,
@@ -511,8 +507,6 @@ class AppointmentDetailsView extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 8),
-
-            // Payment Method
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -524,8 +518,6 @@ class AppointmentDetailsView extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 8),
-
-            // Creation Date
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -533,7 +525,6 @@ class AppointmentDetailsView extends ConsumerWidget {
                 Text(dateFormat.format(payment.createdAt)),
               ],
             ),
-
             if (payment.completedAt != null) ...[
               const SizedBox(height: 8),
               Row(
@@ -547,13 +538,11 @@ class AppointmentDetailsView extends ConsumerWidget {
                 ],
               ),
             ],
-
             if (payment.status == PaymentStatus.pending &&
                 payment.paymentLink != null) ...[
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 8),
-
               Row(
                 children: [
                   Expanded(
@@ -571,7 +560,6 @@ class AppointmentDetailsView extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 8),
-
               Row(
                 children: [
                   Expanded(
@@ -609,10 +597,8 @@ class AppointmentDetailsView extends ConsumerWidget {
             ),
             const Divider(),
             const SizedBox(height: 16),
-
             const Text('No payment information found for this appointment.'),
             const SizedBox(height: 16),
-
             ElevatedButton.icon(
               onPressed: () => _createPayment(context, ref, appointment),
               icon: const Icon(Icons.payment),
@@ -632,7 +618,6 @@ class AppointmentDetailsView extends ConsumerWidget {
     WidgetRef ref,
     appointment_model.Appointment appointment,
   ) {
-    // Determine which buttons to show based on appointment status
     final bool canCancel =
         appointment.status == appointment_model.AppointmentStatus.scheduled;
     final bool canComplete =
@@ -650,8 +635,6 @@ class AppointmentDetailsView extends ConsumerWidget {
             Text('Actions', style: Theme.of(context).textTheme.titleLarge),
             const Divider(),
             const SizedBox(height: 8),
-
-            // Action Buttons
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -665,12 +648,11 @@ class AppointmentDetailsView extends ConsumerWidget {
                           appointment,
                         ),
                     icon: const Icon(Icons.cancel, color: Colors.red),
-                    label: const Text('Cancel appointment_model.Appointment'),
+                    label: const Text('Cancel Appointment'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                     ),
                   ),
-
                 if (canComplete)
                   OutlinedButton.icon(
                     onPressed:
@@ -678,7 +660,6 @@ class AppointmentDetailsView extends ConsumerWidget {
                     icon: const Icon(Icons.check_circle),
                     label: const Text('Mark as Completed'),
                   ),
-
                 if (canSendReminder)
                   OutlinedButton.icon(
                     onPressed:
@@ -694,16 +675,18 @@ class AppointmentDetailsView extends ConsumerWidget {
     );
   }
 
-  void _navigateToEditAppointment(BuildContext context, String appointmentId) {
+  void _navigateToEditAppointment(
+    BuildContext context,
+    WidgetRef ref,
+    String appointmentId,
+  ) {
     Navigator.of(context)
         .push(
           MaterialPageRoute(
             builder: (_) => AppointmentFormView(appointmentId: appointmentId),
           ),
         )
-        .then((_) {
-          // Refresh appointment details when returning from edit screen
-        });
+        .then((_) => ref.invalidate(appointmentDetailsProvider(appointmentId)));
   }
 
   void _confirmCancelAppointment(
@@ -715,7 +698,7 @@ class AppointmentDetailsView extends ConsumerWidget {
       context: context,
       builder:
           (context) => ConfirmDialog(
-            title: 'Cancel appointment_model.Appointment',
+            title: 'Cancel Appointment',
             content:
                 'Are you sure you want to cancel this appointment? This action cannot be undone.',
             confirmText: 'Yes, Cancel',
@@ -737,16 +720,11 @@ class AppointmentDetailsView extends ConsumerWidget {
     final result = await ref
         .read(appointmentControllerProvider)
         .cancelAppointment(appointment.id);
-
     if (!context.mounted) return;
-
     if (result.isSuccess) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('appointment_model.Appointment cancelled successfully'),
-        ),
+        const SnackBar(content: Text('Appointment cancelled successfully')),
       );
-      // Refresh data
       ref.invalidate(appointmentDetailsProvider(appointmentId));
       ref.invalidate(allAppointmentsProvider);
     } else {
@@ -765,20 +743,14 @@ class AppointmentDetailsView extends ConsumerWidget {
       status: appointment_model.AppointmentStatus.completed,
       updatedAt: DateTime.now(),
     );
-
     final result = await ref
         .read(appointmentControllerProvider)
         .updateAppointment(updatedAppointment);
-
     if (!context.mounted) return;
-
     if (result.isSuccess) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('appointment_model.Appointment marked as completed'),
-        ),
+        const SnackBar(content: Text('Appointment marked as completed')),
       );
-      // Refresh data
       ref.invalidate(appointmentDetailsProvider(appointmentId));
       ref.invalidate(allAppointmentsProvider);
     } else {
@@ -793,7 +765,6 @@ class AppointmentDetailsView extends ConsumerWidget {
     WidgetRef ref,
     appointment_model.Appointment appointment,
   ) async {
-    // Get patient details
     final patientAsync = await ref.read(
       appointmentPatientProvider(appointment.patientId).future,
     );
@@ -805,24 +776,17 @@ class AppointmentDetailsView extends ConsumerWidget {
       }
       return;
     }
-
     final dateFormat = DateFormat('EEEE, MMMM d, yyyy');
     final timeFormat = DateFormat('h:mm a');
-
-    // Create reminder message
     final message =
         'Dear ${patientAsync.name}, this is a reminder for your appointment on '
         '${dateFormat.format(appointment.dateTime)} at ${timeFormat.format(appointment.dateTime)} '
         'with Dr. ${appointment.doctorName}. Please arrive 10 minutes early.';
-
-    // Send SMS
     try {
       final result = await ref
           .read(messegingControllerProvider)
           .sendSms(phoneNumber: patientAsync.phone, message: message);
-
       if (!context.mounted) return;
-
       if (result.isSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Reminder SMS sent successfully')),
@@ -847,7 +811,6 @@ class AppointmentDetailsView extends ConsumerWidget {
     appointment_model.Appointment appointment,
   ) async {
     try {
-      // Get patient details
       final patientAsync = await ref.read(
         appointmentPatientProvider(appointment.patientId).future,
       );
@@ -859,21 +822,16 @@ class AppointmentDetailsView extends ConsumerWidget {
         }
         return;
       }
-
-      // Create payment record
       final paymentResult = await ref
           .read(paymentControllerProvider)
           .createPayment(
             appointmentId: appointment.id,
             patientId: appointment.patientId,
             doctorId: appointment.doctorId,
-            amount: 25.0, // Default amount from your config
+            amount: 25.0,
           );
-
       if (!context.mounted) return;
-
       if (paymentResult.isSuccess && paymentResult.data != null) {
-        // Generate payment link
         final generateLinkResult = await ref
             .read(paymentControllerProvider)
             .generatePaymentLink(
@@ -881,24 +839,18 @@ class AppointmentDetailsView extends ConsumerWidget {
               patientName: patientAsync.name,
               patientMobile: patientAsync.phone,
             );
-
         if (!context.mounted) return;
-
         if (generateLinkResult.isSuccess) {
-          // Send payment link
           final sendLinkResult = await ref
               .read(paymentControllerProvider)
               .sendPaymentLink(paymentId: paymentResult.data!.id);
-
           if (!context.mounted) return;
-
           if (sendLinkResult.isSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Payment link sent to ${patientAsync.name}'),
               ),
             );
-            // Refresh data
             ref.invalidate(appointmentPaymentProvider(appointment.id));
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -933,9 +885,7 @@ class AppointmentDetailsView extends ConsumerWidget {
       final result = await ref
           .read(paymentControllerProvider)
           .sendPaymentLink(paymentId: payment.id);
-
       if (!context.mounted) return;
-
       if (result.isSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Payment link resent successfully')),
@@ -959,27 +909,28 @@ class AppointmentDetailsView extends ConsumerWidget {
     WidgetRef ref,
     Payment payment,
   ) async {
+    print('Checking payment status for payment ID: ${payment.id}');
     try {
       final status = await ref
           .read(paymentControllerProvider)
           .checkPaymentStatus(payment.id);
-
       if (!context.mounted) return;
-
-      // Refresh data
-      ref.invalidate(appointmentPaymentProvider(payment.appointmentId));
-      ref.invalidate(appointmentDetailsProvider(payment.appointmentId));
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Payment status: ${status.toString().split('.').last}'),
-        ),
-      );
+      if (status.isSuccess) {
+        ref.invalidate(appointmentPaymentProvider(payment.appointmentId));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Payment status: ${status.data.toString()}')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${status.errorMessage}')),
+        );
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error checking payment status: $e')),
         );
+        print('Error checking payment status: $e');
       }
     }
   }
