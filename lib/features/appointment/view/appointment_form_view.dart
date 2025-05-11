@@ -328,7 +328,9 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
       // Create payment record
       final paymentResult = await ref
           .read(paymentControllerProvider)
-          .createPayment(
+          .createAndGeneratePayment(
+            patientName:  _selectedPatient!.name,
+            patientMobile:  _selectedPatient!.phone,
             appointmentId: appointment.id,
             amount: 25.0,
             patientId: _selectedPatient!.id,

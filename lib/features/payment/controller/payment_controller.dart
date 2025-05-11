@@ -17,7 +17,9 @@ class PaymentController {
   PaymentController(this._firebaseService) : _httpClient = http.Client();
 
   // Create payment record in Firestore
-  Future<Result<Payment>> createPayment({
+  Future<Result<Payment>> createAndGeneratePayment({
+    required String patientName,
+    required String patientMobile,
     required String appointmentId,
     required String patientId,
     required String doctorId,
@@ -50,8 +52,14 @@ class PaymentController {
     final docRef = await _firebaseService.firestore
         .collection('payments')
         .add(newPayment.toMap());
+    
+    final generatePaymentLink = await this.generatePaymentLink(
+      paymentId: docRef.id,
+      patientName: 'Patient Name', // Replace with actual patient name
+      patientMobile: 'Patient Mobile', // Replace with actual patient mobile
+    );
 
-    return Result.success(newPayment.copyWith(id: docRef.id));
+    return Result.success(generatePaymentLink.data);
   }
 
   // Generate payment link via MyFatoorah API
@@ -128,9 +136,7 @@ class PaymentController {
   }
 
   // Send payment link via SMS/WhatsApp
-  Future<Result<bool>> sendPaymentLink({
-    required String paymentId,
-  }) async {
+  Future<Result<bool>> sendPaymentLink({required String paymentId}) async {
     final payment = await _getPaymentById(paymentId);
     if (payment == null || payment.paymentLink == null) {
       throw Exception('Payment or payment link not found');
@@ -169,7 +175,7 @@ class PaymentController {
     }
 
     // Create message text
-    print( 'Create message text for Patient Name: ${patient.name}');
+    print('Create message text for Patient Name: ${patient.name}');
     final messageText = PaymentConfig.paymentMessageTemplate(
       patientName: patient.name,
       appointmentDate: appointmentDate,

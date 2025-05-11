@@ -824,7 +824,9 @@ class AppointmentDetailsView extends ConsumerWidget {
       }
       final paymentResult = await ref
           .read(paymentControllerProvider)
-          .createPayment(
+          .createAndGeneratePayment(
+            patientName: patientAsync.name,
+            patientMobile: patientAsync.phone,
             appointmentId: appointment.id,
             patientId: appointment.patientId,
             doctorId: appointment.doctorId,
@@ -832,34 +834,20 @@ class AppointmentDetailsView extends ConsumerWidget {
           );
       if (!context.mounted) return;
       if (paymentResult.isSuccess && paymentResult.data != null) {
-        final generateLinkResult = await ref
+        final sendLinkResult = await ref
             .read(paymentControllerProvider)
-            .generatePaymentLink(
-              paymentId: paymentResult.data!.id,
-              patientName: patientAsync.name,
-              patientMobile: patientAsync.phone,
-            );
+            .sendPaymentLink(paymentId: paymentResult.data!.id);
         if (!context.mounted) return;
-        if (generateLinkResult.isSuccess) {
-          final sendLinkResult = await ref
-              .read(paymentControllerProvider)
-              .sendPaymentLink(paymentId: paymentResult.data!.id);
-          if (!context.mounted) return;
-          if (sendLinkResult.isSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Payment link sent to ${patientAsync.name}'),
-              ),
-            );
-            ref.invalidate(appointmentPaymentProvider(appointment.id));
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Failed to send payment link')),
-            );
-          }
+        if (sendLinkResult.isSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Payment link sent to ${patientAsync.name}'),
+            ),
+          );
+          ref.invalidate(appointmentPaymentProvider(appointment.id));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to generate payment link')),
+            const SnackBar(content: Text('Failed to send payment link')),
           );
         }
       } else {
