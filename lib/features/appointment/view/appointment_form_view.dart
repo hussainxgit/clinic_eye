@@ -329,8 +329,8 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
       final paymentResult = await ref
           .read(paymentControllerProvider)
           .createAndGeneratePayment(
-            patientName:  _selectedPatient!.name,
-            patientMobile:  _selectedPatient!.phone,
+            patientName: _selectedPatient!.name,
+            patientMobile: _selectedPatient!.phone,
             appointmentId: appointment.id,
             amount: 25.0,
             patientId: _selectedPatient!.id,
@@ -349,6 +349,8 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
             paymentId: paymentResult.data!.id,
             patientName: appointment.patientName,
             patientMobile: _selectedPatient!.phone,
+            amount: 25.0,
+            currency: 'KWD',
           );
 
       if (!generateResult.isSuccess) {

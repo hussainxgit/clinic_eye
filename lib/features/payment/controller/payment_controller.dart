@@ -1,20 +1,20 @@
 // services/payment/payment_service.dart
 import 'package:clinic_eye/core/models/result.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'dart:convert';
-import '../../messaging/controller/messeging_controller.dart';
+import '../../messaging/services/kwt_sms_service.dart';
 import '../config/payment_config.dart';
 import '../../patient/model/patient.dart';
 import '../model/payment.dart';
 import '../../../core/services/firebase/firebase_service.dart';
+import '../services/my_fatoorah_service.dart'; // Import the new service
 
 class PaymentController {
   final FirebaseService _firebaseService;
-  final http.Client _httpClient;
+  final MyFatoorahService _myFatoorahService; // Add MyFatoorahService
+  final KwtSmsService messagingService; // Add read provider
 
-  PaymentController(this._firebaseService) : _httpClient = http.Client();
+  PaymentController(this._firebaseService, this._myFatoorahService, this.messagingService); // Update constructor
 
   // Create payment record in Firestore
   Future<Result<Payment>> createAndGeneratePayment({
@@ -32,34 +32,35 @@ class PaymentController {
       final latestPayment = existingPayments.first;
       if (latestPayment.status == PaymentStatus.successful ||
           latestPayment.status == PaymentStatus.pending) {
-        return Result.success(latestPayment);
+        if (latestPayment.status == PaymentStatus.successful) {
+          return Result.success(latestPayment);
+        }
       }
     }
 
-    // Create new payment record
-    final newPayment = Payment(
-      id: '',
-      appointmentId: appointmentId,
-      patientId: patientId,
-      doctorId: doctorId,
+    // Create new payment record or use existing pending
+    Payment paymentToProcess;
+    String paymentIdToUse;
+
+    final pendingPayment = existingPayments.firstWhere((p) => p.status == PaymentStatus.pending, orElse: () => null as Payment);
+
+    paymentToProcess = pendingPayment;
+    paymentIdToUse = pendingPayment.id;
+    await _firebaseService.firestore.collection('payments').doc(paymentIdToUse).update({'createdAt': DateTime.now()});
+  
+    final generatePaymentLinkResult = await generatePaymentLink(
+      paymentId: paymentIdToUse,
+      patientName: patientName,
+      patientMobile: patientMobile,
       amount: amount,
       currency: currency,
-      status: PaymentStatus.pending,
-      paymentMethod: 'myfatoorah',
-      createdAt: DateTime.now(),
     );
 
-    final docRef = await _firebaseService.firestore
-        .collection('payments')
-        .add(newPayment.toMap());
-    
-    final generatePaymentLink = await this.generatePaymentLink(
-      paymentId: docRef.id,
-      patientName: 'Patient Name', // Replace with actual patient name
-      patientMobile: 'Patient Mobile', // Replace with actual patient mobile
-    );
-
-    return Result.success(generatePaymentLink.data);
+    if (generatePaymentLinkResult.isSuccess) {
+      return Result.success(generatePaymentLinkResult.data!);
+    } else {
+      return Result.error(generatePaymentLinkResult.errorMessage ?? "Failed to generate payment link");
+    }
   }
 
   // Generate payment link via MyFatoorah API
@@ -67,71 +68,45 @@ class PaymentController {
     required String paymentId,
     required String patientName,
     required String patientMobile,
+    required double amount,
+    required String currency,
   }) async {
     final payment = await _getPaymentById(paymentId);
     if (payment == null) {
-      throw Exception('Payment not found');
+      return Result.error('Payment not found');
     }
 
-    final url = '${PaymentConfig.baseUrl}/v2/SendPayment';
-    final response = await _httpClient.post(
-      Uri.parse(url),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${PaymentConfig.apiKey}',
-      },
-      body: jsonEncode({
-        'NotificationOption': 'LNK', // Return link only, don't send email/SMS
-        'CustomerName': patientName,
-        'DisplayCurrencyIso': payment.currency,
-        'MobileCountryCode': '+965',
-        'CustomerMobile': patientMobile,
-        'InvoiceValue': payment.amount,
-        'CallBackUrl': PaymentConfig.webhookUrl,
-        'ErrorUrl': PaymentConfig.webhookUrl,
-        'Language': 'en',
-        'CustomerReference': payment.appointmentId,
-        'InvoiceItems': [
-          {
-            'ItemName': 'Eye Clinic Appointment',
-            'Quantity': 1,
-            'UnitPrice': payment.amount,
-          },
-        ],
-      }),
+    final result = await _myFatoorahService.generatePaymentLink(
+      amount: amount,
+      currency: currency,
+      customerName: patientName,
+      customerMobile: patientMobile,
+      customerEmail: 'test@example.com',
+      orderId: paymentId,
+      callbackUrl: PaymentConfig.callbackUrl,
     );
-    print('Response: ${response.body}');
-    print('Status Code: ${response.statusCode}');
 
-    if (response.statusCode == 200) {
-      final responseData = jsonDecode(response.body);
-      if (responseData['IsSuccess'] == true) {
-        final data = responseData['Data'];
+    if (result.isSuccess) {
+      final responseData = result.data!;
+      final paymentUrl = responseData['PaymentURL'] as String?;
+      final invoiceId = responseData['InvoiceId'] as String?;
+
+      if (paymentUrl != null && invoiceId != null) {
         final updatedPayment = payment.copyWith(
-          invoiceId: data['InvoiceId'].toString(),
-          paymentLink: data['InvoiceURL'],
-          metadata: {
-            ...payment.metadata ?? {},
-            'invoiceCreatedAt': DateTime.now().toIso8601String(),
-          },
+          paymentLink: paymentUrl,
+          invoiceId: invoiceId,
+          status: PaymentStatus.pending,
         );
-
-        // Update the payment record
         await _firebaseService.firestore
             .collection('payments')
-            .doc(payment.id)
+            .doc(paymentId)
             .update(updatedPayment.toMap());
-
         return Result.success(updatedPayment);
       } else {
-        final errorMsg =
-            responseData['ValidationErrors']?[0]?['Error'] ??
-            responseData['Message'] ??
-            'Failed to create payment link';
-        throw Exception(errorMsg);
+        return Result.error('PaymentURL or InvoiceId missing in MyFatoorah response');
       }
     } else {
-      throw Exception('HTTP Error: ${response.statusCode}');
+      return Result.error(result.errorMessage ?? 'Failed to generate payment link via MyFatoorahService');
     }
   }
 
@@ -174,8 +149,6 @@ class PaymentController {
       }
     }
 
-    // Create message text
-    print('Create message text for Patient Name: ${patient.name}');
     final messageText = PaymentConfig.paymentMessageTemplate(
       patientName: patient.name,
       appointmentDate: appointmentDate,
@@ -183,16 +156,12 @@ class PaymentController {
       paymentLink: payment.paymentLink!,
     );
 
-    // Send SMS
-    print('Sending SMS to ${patient.phone} with message: $messageText');
-    final messegingController = MessegingController(_firebaseService);
-    final result = await messegingController.sendSms(
-      phoneNumber: '965${patient.phone}',
+    final result = await messagingService.sendSms(
+      mobileNumber: '965${patient.phone}',
       message: messageText,
     );
 
     if (result.isSuccess) {
-      // Update payment record as link sent
       await _firebaseService.firestore
           .collection('payments')
           .doc(payment.id)
@@ -212,51 +181,29 @@ class PaymentController {
   Future<Result<PaymentStatus>> checkPaymentStatus(String paymentId) async {
     final payment = await _getPaymentById(paymentId);
     if (payment == null || payment.invoiceId == null) {
-      throw Exception('Payment or invoice ID not found');
+      return Result.error('Payment or invoice ID not found');
     }
-    // Check if payment status is already successful
-    if (payment.status == PaymentStatus.successful) {
-      return Result.success(payment.status);
-    }
-    // Check payment status via MyFatoorah API
-    final url = '${PaymentConfig.baseUrl}/v2/GetPaymentStatus';
-    final response = await _httpClient.post(
-      Uri.parse(url),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${PaymentConfig.apiKey}',
-      },
-      body: jsonEncode({'Key': payment.invoiceId, 'KeyType': 'InvoiceId'}),
-    );
-    if (response.statusCode == 200) {
-      final responseData = jsonDecode(response.body);
-      if (responseData['IsSuccess'] == true) {
-        final data = responseData['Data'];
-        final invoiceStatus = data['InvoiceStatus'];
 
+    final result = await _myFatoorahService.getPaymentStatus(invoiceId: payment.invoiceId!);
+
+    if (result.isSuccess) {
+      final responseData = result.data!;
+      final invoiceStatus = responseData['InvoiceStatus'] as String?;
+      final transactionId = responseData['TransactionId'] as String?;
+
+      if (invoiceStatus != null) {
         final newStatus = _mapInvoiceStatus(invoiceStatus);
-
-        // If status has changed, update the payment record
-        if (newStatus != payment.status) {
-          await _updatePaymentStatus(
-            payment.id,
-            newStatus,
-            data['TransactionId']?.toString(),
-          );
-
-          // If payment is successful, update the appointment payment status
-          if (newStatus == PaymentStatus.successful) {
-            await _updateAppointmentPaymentStatus(payment.appointmentId);
-          }
+        await _updatePaymentStatus(paymentId, newStatus, transactionId);
+        if (newStatus == PaymentStatus.successful) {
+          await _updateAppointmentPaymentStatus(payment.appointmentId);
         }
         return Result.success(newStatus);
       } else {
-        throw Exception(
-          responseData['Message'] ?? 'Failed to check payment status',
-        );
+        return Result.error('InvoiceStatus missing in MyFatoorah response');
       }
     } else {
-      throw Exception('HTTP Error: ${response.statusCode}');
+      await _updatePaymentStatus(paymentId, PaymentStatus.failed, null);
+      return Result.error(result.errorMessage ?? 'Failed to check payment status via MyFatoorahService');
     }
   }
 
@@ -289,13 +236,11 @@ class PaymentController {
 
   // Private helper methods
   Future<List<Payment>> _getPaymentsByAppointment(String appointmentId) async {
-    final snapshot =
-        await _firebaseService.firestore
-            .collection('payments')
-            .where('appointmentId', isEqualTo: appointmentId)
-            .orderBy('createdAt', descending: true)
-            .get();
-
+    final snapshot = await _firebaseService.firestore
+        .collection('payments')
+        .where('appointmentId', isEqualTo: appointmentId)
+        .orderBy('createdAt', descending: true)
+        .get();
     return snapshot.docs
         .map((doc) => Payment.fromMap(doc.data(), doc.id))
         .toList();

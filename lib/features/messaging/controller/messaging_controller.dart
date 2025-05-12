@@ -1,19 +1,17 @@
 // services/messaging/sms_service.dart
-import 'dart:convert';
 import 'package:clinic_eye/core/models/result.dart';
 import 'package:clinic_eye/features/messaging/model/sms_record.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:http/http.dart' as http;
 import '../model/sms_message.dart';
-import '../model/sms_response.dart';
 import '../../../core/services/firebase/firebase_service.dart';
 import '../config/sms_config.dart';
+import '../services/kwt_sms_service.dart'; // Import the new service
 
 class MessegingController {
   final FirebaseService _firebaseService;
-  final http.Client _httpClient;
+  final KwtSmsService _kwtSmsService; // Add KwtSmsService
 
-  MessegingController(this._firebaseService) : _httpClient = http.Client();
+  MessegingController(this._firebaseService, this._kwtSmsService); // Update constructor
 
   /// Send an SMS message to a single recipient
   Future<Result<bool>> sendSms({
@@ -60,10 +58,16 @@ class MessegingController {
           .collection('sms_messages')
           .add(record.toMap());
 
-      // Send the SMS
-      final response = await _sendSmsRequest(smsMessage);
+      // Send the SMS via KwtSmsService
+      final smsResult = await _kwtSmsService.sendSms(
+        mobileNumber: formattedNumber, // Pass the formatted number
+        message: smsMessage.message,
+        senderId: smsMessage.sender,
+        languageCode: smsMessage.languageCode,
+        isTest: smsMessage.isTest,
+      );
 
-      if (!response.isSuccess) {
+      if (!smsResult.isSuccess) {
         // Update the record with failed status
         await _firebaseService.firestore
             .collection('sms_messages')
@@ -72,28 +76,29 @@ class MessegingController {
               'status': 'failed',
               'metadata': {
                 ...record.metadata ?? {},
-                'error': response.errorMessage,
+                'error': smsResult.errorMessage,
                 'timestamp': DateTime.now().toIso8601String(),
               },
             });
 
-        return Result.error(response.errorMessage);
+        return Result.error(smsResult.errorMessage ?? "Failed to send SMS via KwtSmsService");
       }
 
-      // Update the record with the success result
+      // Update the record with the success result from KwtSmsService
+      final smsResponseData = smsResult.data!;
       await _firebaseService.firestore
           .collection('sms_messages')
           .doc(docRef.id)
           .update({
             'status': 'sent',
-            'messageId': response.messageId,
+            'messageId': smsResponseData.messageId,
             'metadata': {
               ...record.metadata ?? {},
               'response': {
-                'numbersProcessed': response.numbersProcessed,
-                'pointsCharged': response.pointsCharged,
-                'balanceAfter': response.balanceAfter,
-                'timestamp': response.timestamp,
+                'numbersProcessed': smsResponseData.numbersProcessed,
+                'pointsCharged': smsResponseData.pointsCharged,
+                'balanceAfter': smsResponseData.balanceAfter,
+                'timestamp': smsResponseData.timestamp,
               },
             },
           });
@@ -102,75 +107,6 @@ class MessegingController {
     } catch (e) {
       print('Error sending SMS: $e');
       return Result.error(e.toString());
-    }
-  }
-
-  /// Send the actual SMS request to the KWT SMS API
-  Future<SmsResponse> _sendSmsRequest(SmsMessage message) async {
-    try {
-      final payload = {
-        ...message.toMap(),
-        'username': SmsConfig.apiUsername,
-        'password': SmsConfig.apiPassword,
-      };
-
-      final response = await _httpClient.post(
-        Uri.parse(SmsConfig.sendEndpoint),
-        body: payload,
-      );
-      print(payload);
-      print('Response: ${response.body}');
-      print('Status Code: ${response.statusCode}');
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final responseBody = response.body.trim();
-
-        // Check if the response is in the format "OK:messageId:numbers:charged:balance:timestamp"
-        if (responseBody.startsWith('OK:')) {
-          final parts = responseBody.split(':');
-          if (parts.length >= 6) {
-            return SmsResponse(
-              isSuccess: true,
-              messageId: parts[1],
-              numbersProcessed: int.tryParse(parts[2]),
-              pointsCharged: int.tryParse(parts[3]),
-              balanceAfter: int.tryParse(parts[4]),
-              timestamp: int.tryParse(parts[5]),
-            );
-          }
-        }
-
-        // Try parsing as JSON if it's not in the string format
-        try {
-          final jsonResponse = json.decode(responseBody);
-          return SmsResponse.fromMap(jsonResponse);
-        } catch (jsonError) {
-          // If we can't parse as JSON and it starts with "OK", consider it a success
-          if (responseBody.startsWith('OK')) {
-            return SmsResponse(
-              isSuccess: true,
-              messageId: responseBody.substring(3).trim(),
-            );
-          }
-
-          // Otherwise, return the error message
-          return SmsResponse(
-            isSuccess: false,
-            errorMessage: 'Failed to parse API response: $responseBody',
-          );
-        }
-      } else {
-        return SmsResponse(
-          isSuccess: false,
-          errorMessage:
-              'HTTP Error: ${response.statusCode} ${response.reasonPhrase}',
-        );
-      }
-    } catch (e) {
-      return SmsResponse(
-        isSuccess: false,
-        errorMessage: 'Error sending SMS: $e',
-      );
     }
   }
 
@@ -206,3 +142,4 @@ class MessegingController {
     }
   }
 }
+

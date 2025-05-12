@@ -1,8 +1,10 @@
 import 'package:clinic_eye/features/payment/controller/payment_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/appointment/controller/appointment_controller.dart';
-import '../../features/messaging/controller/messeging_controller.dart';
+import '../../features/messaging/controller/messaging_controller.dart';
+import '../../features/messaging/services/kwt_sms_service.dart';
 import '../../features/patient/controller/patient_controller.dart';
+import '../../features/payment/services/my_fatoorah_service.dart';
 import '../services/firebase/firebase_service.dart';
 import '../../features/doctor/controller/doctor_controller.dart';
 
@@ -23,12 +25,14 @@ final selectedNavIndexProvider = StateProvider<int>((ref) {
 // Service providers
 final messegingControllerProvider = Provider<MessegingController>((ref) {
   final firebaseService = ref.watch(firebaseServiceProvider);
-  return MessegingController(firebaseService);
+  return MessegingController(firebaseService, ref.watch(kwtSmsServiceProvider));
 });
 
 final paymentControllerProvider = Provider<PaymentController>((ref) {
   final firebaseService = ref.watch(firebaseServiceProvider);
-  return PaymentController(firebaseService);
+  final myFatoorahService = ref.watch(myFatoorahServiceProvider);
+  final kwtSmsService = ref.watch(kwtSmsServiceProvider);
+  return PaymentController(firebaseService, myFatoorahService, kwtSmsService);
 });
 
 final doctorControllerProvider = Provider<DoctorController>((ref) {
