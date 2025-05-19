@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/config/dependencies.dart';
 import '../../patient/provider/patient_provider.dart';
+import '../model/appointment.dart' hide PaymentStatus;
 
 // Extensions for AppointmentStatus
 extension AppointmentStatusX on appointment_model.AppointmentStatus {
@@ -808,60 +809,149 @@ class AppointmentDetailsView extends ConsumerWidget {
   Future<void> _createPayment(
     BuildContext context,
     WidgetRef ref,
-    appointment_model.Appointment appointment,
+    Appointment appointment,
   ) async {
+    // Show loading indicator
+
+    final loadingOverlay = _showLoadingOverlay(context);
+
     try {
-      final patientAsync = await ref.read(
-        appointmentPatientProvider(appointment.patientId).future,
-      );
-      if (patientAsync == null) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Patient information not available')),
-          );
-        }
+      // Get patient information
+      final patient = await _getPatientInfo(ref, appointment.patientId);
+      if (patient == null) {
+        _dismissLoadingOverlay(loadingOverlay);
+        if (!context.mounted) return;
+        _showErrorMessage(context, 'Patient information not available');
         return;
       }
-      final paymentResult = await ref
-          .read(paymentControllerProvider)
-          .createAndGeneratePayment(
-            patientName: patientAsync.name,
-            patientMobile: patientAsync.phone,
-            appointmentId: appointment.id,
-            patientId: appointment.patientId,
-            doctorId: appointment.doctorId,
-            amount: 25.0,
-          );
-      if (!context.mounted) return;
-      if (paymentResult.isSuccess && paymentResult.data != null) {
-        final sendLinkResult = await ref
-            .read(paymentControllerProvider)
-            .sendPaymentLink(payment: paymentResult.data!);
-        if (!context.mounted) return;
-        if (sendLinkResult.isSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Payment link sent to ${patientAsync.name}'),
-            ),
-          );
-          ref.invalidate(appointmentPaymentProvider(appointment.id));
+
+      // Create payment
+      final payment = await _processPayment(ref, appointment, patient).then((
+        result,
+      ) {
+        if (result.isSuccess) {
+          return result.data!;
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to send payment link')),
-          );
+          if (!context.mounted) return null;
+          _showErrorMessage(context, 'Error: ${result.errorMessage}');
+          return null;
         }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${paymentResult.errorMessage}')),
-        );
+      });
+
+      // Send payment link via SMS
+      if (!context.mounted) return;
+      final success = await _sendPaymentLink(
+        ref,
+        context,
+        payment!,
+        patient.name,
+      );
+
+      // Refresh payment provider to update UI
+      ref.invalidate(appointmentPaymentProvider(appointment.id));
+
+      _dismissLoadingOverlay(loadingOverlay);
+
+      if (success) {
+        if (!context.mounted) return;
+        _showSuccessMessage(context, 'Payment link sent to ${patient.name}');
       }
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+      _dismissLoadingOverlay(loadingOverlay);
+      if (!context.mounted) return;
+      _showErrorMessage(context, 'Error: $e');
     }
+  }
+
+  // Get patient information
+  Future<Patient?> _getPatientInfo(WidgetRef ref, String patientId) async {
+    return await ref.read(appointmentPatientProvider(patientId).future);
+  }
+
+  // Process payment creation
+  Future<Result<Payment>> _processPayment(
+    WidgetRef ref,
+    Appointment appointment,
+    Patient patient,
+  ) async {
+    final paymentResult = await ref
+        .read(paymentControllerProvider)
+        .createAndGeneratePayment(
+          patientName: patient.name,
+          patientMobile: patient.phone,
+          appointmentId: appointment.id,
+          patientId: appointment.patientId,
+          doctorId: appointment.doctorId,
+          amount: 25.0, // Consider making this configurable
+        );
+
+    if (!paymentResult.isSuccess || paymentResult.data == null) {
+      if (!ref.context.mounted) return Result.error('widget not mounted');
+      _showErrorMessage(ref.context, 'Error: ${paymentResult.errorMessage}');
+      return Result.error('Error: ${paymentResult.errorMessage}');
+    }
+
+    return Result.success(paymentResult.data);
+  }
+
+  // Send payment link via SMS
+  Future<bool> _sendPaymentLink(
+    WidgetRef ref,
+    BuildContext context,
+    Payment payment,
+    String patientName,
+  ) async {
+    if (!context.mounted) return false;
+
+    final sendLinkResult = await ref
+        .read(paymentControllerProvider)
+        .sendPaymentLink(payment: payment);
+
+    if (!context.mounted) return false;
+
+    if (!sendLinkResult.isSuccess) {
+      _showErrorMessage(context, 'Failed to send payment link');
+      return false;
+    }
+
+    return true;
+  }
+
+  // Show loading overlay
+  OverlayEntry _showLoadingOverlay(BuildContext context) {
+    final overlay = OverlayEntry(
+      builder:
+          (context) => Container(
+            color: Colors.black.withOpacity(0.3),
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+    );
+
+    Overlay.of(context).insert(overlay);
+    return overlay;
+  }
+
+  // Dismiss loading overlay
+  void _dismissLoadingOverlay(OverlayEntry loadingOverlay) {
+    loadingOverlay.remove();
+  }
+
+  // Show error message
+  void _showErrorMessage(BuildContext context, String message) {
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  // Show success message
+  void _showSuccessMessage(BuildContext context, String message) {
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
+    );
   }
 
   Future<void> _resendPaymentLink(

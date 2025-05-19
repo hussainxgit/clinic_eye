@@ -20,7 +20,7 @@ class KwtSmsService {
     final payload = {
       'username': SmsConfig.apiUsername,
       'password': SmsConfig.apiPassword,
-      'mobile': mobileNumber, // Already formatted by controller
+      'mobile': '965$mobileNumber',
       'message': message,
       'sender': senderId ?? SmsConfig.defaultSenderId,
       'lang': (languageCode ?? SmsConfig.englishLanguage).toString(),
@@ -33,9 +33,9 @@ class KwtSmsService {
         body: payload,
       );
 
-      print('KWT SMS Request Payload: \$payload');
-      print('KWT SMS Response: \${response.body}');
-      print('KWT SMS Status Code: \${response.statusCode}');
+      print('KWT SMS Request Payload: $payload');
+      print('KWT SMS Response: ${response.body}');
+      print('KWT SMS Status Code: ${response.statusCode}');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final responseBody = response.body.trim();
