@@ -323,7 +323,6 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
   // Extract payment processing to a separate method
   Future<void> _processPayment(Appointment appointment) async {
     setState(() => _isLoading = true);
-
     try {
       // Create payment record
       final paymentResult = await ref
@@ -338,30 +337,14 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
           );
 
       if (!paymentResult.isSuccess) {
-        _showMessage('Failed to create payment record', isError: true);
-        return;
-      }
-
-      // Generate payment link
-      final generateResult = await ref
-          .read(paymentControllerProvider)
-          .generatePaymentLink(
-            paymentId: paymentResult.data!.id,
-            patientName: appointment.patientName,
-            patientMobile: _selectedPatient!.phone,
-            amount: 25.0,
-            currency: 'KWD',
-          );
-
-      if (!generateResult.isSuccess) {
-        _showMessage('Failed to generate payment link', isError: true);
+        _showMessage('Failed to create payment record: ${paymentResult.errorMessage}', isError: true);
         return;
       }
 
       // Send payment link
       final sendResult = await ref
           .read(paymentControllerProvider)
-          .sendPaymentLink(paymentId: paymentResult.data!.id);
+          .sendPaymentLink(payment: paymentResult.data!);
       if (sendResult.isSuccess) {
         _showMessage(
           'Payment link generated and SMS sent successfully',

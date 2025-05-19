@@ -836,7 +836,7 @@ class AppointmentDetailsView extends ConsumerWidget {
       if (paymentResult.isSuccess && paymentResult.data != null) {
         final sendLinkResult = await ref
             .read(paymentControllerProvider)
-            .sendPaymentLink(paymentId: paymentResult.data!.id);
+            .sendPaymentLink(payment: paymentResult.data!);
         if (!context.mounted) return;
         if (sendLinkResult.isSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -872,7 +872,7 @@ class AppointmentDetailsView extends ConsumerWidget {
     try {
       final result = await ref
           .read(paymentControllerProvider)
-          .sendPaymentLink(paymentId: payment.id);
+          .sendPaymentLink(payment: payment);
       if (!context.mounted) return;
       if (result.isSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(

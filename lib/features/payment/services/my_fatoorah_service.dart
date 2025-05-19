@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:clinic_eye/core/models/result.dart';
 
+import '../config/payment_config.dart';
+
 class MyFatoorahService {
   final http.Client _httpClient;
 
@@ -18,9 +20,9 @@ class MyFatoorahService {
     required String callbackUrl,
     String language = 'en',
   }) async {
-    final url = '\${PaymentConfig.baseUrl}/v2/SendPayment';
+    final url = '${PaymentConfig.baseUrl}/v2/SendPayment';
     final headers = {
-      'Authorization': 'Bearer \${PaymentConfig.apiKey}',
+      'Authorization': 'Bearer ${PaymentConfig.apiKey}',
       'Content-Type': 'application/json',
     };
     final body = jsonEncode({
@@ -46,9 +48,9 @@ class MyFatoorahService {
         body: body,
       );
 
-      print('MyFatoorah SendPayment Request: \$body');
-      print('MyFatoorah SendPayment Response: \${response.body}');
-      print('MyFatoorah SendPayment Status Code: \${response.statusCode}');
+      print('MyFatoorah SendPayment Request: $body');
+      print('MyFatoorah SendPayment Response: ${response.body}');
+      print('MyFatoorah SendPayment Status Code: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -58,10 +60,10 @@ class MyFatoorahService {
           return Result.error(responseData['Message'] ?? 'Failed to generate payment link from MyFatoorah');
         }
       } else {
-        return Result.error('MyFatoorah API Error: \${response.statusCode} - \${response.reasonPhrase}');
+        return Result.error('MyFatoorah API Error: ${response.statusCode} - ${response.reasonPhrase}');
       }
     } catch (e) {
-      print('Error calling MyFatoorah SendPayment API: \$e');
+      print('Error calling MyFatoorah SendPayment API: $e');
       return Result.error('Exception during MyFatoorah API call: \$e');
     }
   }
