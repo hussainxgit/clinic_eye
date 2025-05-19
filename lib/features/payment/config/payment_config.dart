@@ -22,7 +22,7 @@ class PaymentConfig {
 
   static String get callbackUrl => 
       dotenv.env['MYFATOORAH_CALLBACK_URL'] ?? 
-      'https://yourapp.com/payment/callback'; // Added callbackUrl
+      'https://myfatoorahwebhook-45g5y5hrca-uc.a.run.app'; // Added callbackUrl
 
   // Default payment settings
   static const String defaultCurrency = 'KWD';

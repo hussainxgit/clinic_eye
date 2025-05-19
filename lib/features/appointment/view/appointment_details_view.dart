@@ -809,89 +809,47 @@ class AppointmentDetailsView extends ConsumerWidget {
   Future<void> _createPayment(
     BuildContext context,
     WidgetRef ref,
-    Appointment appointment,
+    appointment_model.Appointment appointment,
   ) async {
-    // Show loading indicator
-
     final loadingOverlay = _showLoadingOverlay(context);
-
-    try {
-      // Get patient information
-      final patient = await _getPatientInfo(ref, appointment.patientId);
-      if (patient == null) {
-        _dismissLoadingOverlay(loadingOverlay);
-        if (!context.mounted) return;
-        _showErrorMessage(context, 'Patient information not available');
-        return;
-      }
-
-      // Create payment
-      final payment = await _processPayment(ref, appointment, patient).then((
-        result,
-      ) {
-        if (result.isSuccess) {
-          return result.data!;
-        } else {
-          if (!context.mounted) return null;
-          _showErrorMessage(context, 'Error: ${result.errorMessage}');
-          return null;
-        }
-      });
-
-      // Send payment link via SMS
-      if (!context.mounted) return;
-      final success = await _sendPaymentLink(
-        ref,
-        context,
-        payment!,
-        patient.name,
-      );
-
-      // Refresh payment provider to update UI
-      ref.invalidate(appointmentPaymentProvider(appointment.id));
-
+    final patient = await _getPatientInfo(ref, appointment.patientId);
+    if (patient == null) {
       _dismissLoadingOverlay(loadingOverlay);
-
-      if (success) {
-        if (!context.mounted) return;
-        _showSuccessMessage(context, 'Payment link sent to ${patient.name}');
-      }
-    } catch (e) {
-      _dismissLoadingOverlay(loadingOverlay);
-      if (!context.mounted) return;
-      _showErrorMessage(context, 'Error: $e');
+      _showErrorMessage(context, 'Patient information not available');
+      return;
     }
+
+    final createPaymentResult = await ref
+        .read(paymentControllerProvider)
+        .createAndGeneratePayment(
+          patientName: appointment.patientName,
+          patientMobile: patient.phone,
+          appointmentId: appointment.id,
+          patientId: appointment.patientId,
+          doctorId: appointment.patientId,
+          amount: 25.0,
+        );
+    if (!context.mounted) return;
+    final sendLinkResult = await _sendPaymentLink(
+      ref,
+      context,
+      createPaymentResult.data!,
+      patient.name,
+    );
+
+    if (!sendLinkResult) {
+      _dismissLoadingOverlay(loadingOverlay);
+      return;
+    }
+
+    _dismissLoadingOverlay(loadingOverlay);
+    if (!context.mounted) return;
+    _showSuccessMessage(context, 'Payment link sent successfully');
   }
 
   // Get patient information
   Future<Patient?> _getPatientInfo(WidgetRef ref, String patientId) async {
     return await ref.read(appointmentPatientProvider(patientId).future);
-  }
-
-  // Process payment creation
-  Future<Result<Payment>> _processPayment(
-    WidgetRef ref,
-    Appointment appointment,
-    Patient patient,
-  ) async {
-    final paymentResult = await ref
-        .read(paymentControllerProvider)
-        .createAndGeneratePayment(
-          patientName: patient.name,
-          patientMobile: patient.phone,
-          appointmentId: appointment.id,
-          patientId: appointment.patientId,
-          doctorId: appointment.doctorId,
-          amount: 25.0, // Consider making this configurable
-        );
-
-    if (!paymentResult.isSuccess || paymentResult.data == null) {
-      if (!ref.context.mounted) return Result.error('widget not mounted');
-      _showErrorMessage(ref.context, 'Error: ${paymentResult.errorMessage}');
-      return Result.error('Error: ${paymentResult.errorMessage}');
-    }
-
-    return Result.success(paymentResult.data);
   }
 
   // Send payment link via SMS
@@ -910,7 +868,10 @@ class AppointmentDetailsView extends ConsumerWidget {
     if (!context.mounted) return false;
 
     if (!sendLinkResult.isSuccess) {
-      _showErrorMessage(context, 'Failed to send payment link');
+      _showErrorMessage(
+        context,
+        'Failed to send payment link: ${sendLinkResult.errorMessage}',
+      );
       return false;
     }
 

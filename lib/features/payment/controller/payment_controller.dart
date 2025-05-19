@@ -36,7 +36,9 @@ class PaymentController {
       // Return successful payment if exists
       for (final payment in existingPayments) {
         if (payment.status == PaymentStatus.successful) {
-          return Result.success(payment);
+          return Result.error(
+            'Payment already completed for this appointment',
+          );
         }
       }
 
@@ -58,11 +60,9 @@ class PaymentController {
         return Result.success(pendingPayment);
       }
 
-      // Create new payment with pre-generated ID
-      final newPaymentRef =
-          _firebaseService.firestore.collection('payments').doc();
+      // Create new payment
       final payment = Payment(
-        id: newPaymentRef.id,
+        id: '',
         appointmentId: appointmentId,
         patientId: patientId,
         doctorId: doctorId,
