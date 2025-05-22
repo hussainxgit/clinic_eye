@@ -80,7 +80,7 @@ class PaymentController {
         patientMobile: patientMobile,
       );
 
-      return result;
+      return Result.success(result.data!);
     } catch (e) {
       return Result.error('Error creating payment: $e');
     }

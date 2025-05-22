@@ -830,7 +830,6 @@ class AppointmentDetailsView extends ConsumerWidget {
           amount: 25.0,
         );
     if (!context.mounted) return;
-    print('Create payment result: $createPaymentResult');
     final sendLinkResult = await _sendPaymentLink(
       ref,
       context,
