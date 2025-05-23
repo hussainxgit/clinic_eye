@@ -46,9 +46,8 @@ class PaymentController {
             customerEmail: customerEmail,
             paymentId: savePayment.id,
           );
-
       print(
-        myFatoorahPaymentLink.data!,
+        myFatoorahPaymentLink.data!['InvoiceURL'],
       );
       await _firebaseService.updateDocument(
         'payments',
@@ -60,7 +59,6 @@ class PaymentController {
           transactionId: myFatoorahPaymentLink.data!['TransactionId'],
         ).toMap(),
       );
-      
       print(
         payment.copyWith(
           id: savePayment.id,
