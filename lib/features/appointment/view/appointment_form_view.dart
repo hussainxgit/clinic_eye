@@ -327,13 +327,14 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
       // Create payment record
       final paymentResult = await ref
           .read(paymentControllerProvider)
-          .createAndGeneratePayment(
-            patientName: _selectedPatient!.name,
-            patientMobile: _selectedPatient!.phone,
-            appointmentId: appointment.id,
-            amount: 25.0,
+          .generatePaymentLink(
             patientId: _selectedPatient!.id,
             doctorId: appointment.doctorId,
+            customerName: _selectedPatient!.name,
+            customerMobile: _selectedPatient!.phone,
+            appointmentId: appointment.id,
+            amount: 25.0,
+            
           );
 
       if (!paymentResult.isSuccess) {
@@ -342,15 +343,7 @@ class _AppointmentFormViewState extends ConsumerState<AppointmentFormView> {
       }
 
       // Send payment link
-      final sendResult = await ref
-          .read(paymentControllerProvider)
-          .sendPaymentLink(payment: paymentResult.data!);
-      if (sendResult.isSuccess) {
-        _showMessage(
-          'Payment link generated and SMS sent successfully',
-          isError: false,
-        );
-      }
+     
     } catch (e) {
       _showMessage('Error processing payment: ${e.toString()}', isError: true);
     } finally {

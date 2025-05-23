@@ -11,16 +11,14 @@ class AppointmentController {
   // Get all appointments - uses index on dateTime
   Future<Result<List<Appointment>>> getAllAppointments() async {
     try {
-      final snapshot =
-          await _firebaseService.firestore
-              .collection('appointments')
-              .orderBy('dateTime', descending: true)
-              .get();
+      final snapshot = await _firebaseService.firestore
+          .collection('appointments')
+          .orderBy('dateTime', descending: true)
+          .get();
 
-      final appointments =
-          snapshot.docs
-              .map((doc) => Appointment.fromMap(doc.data(), doc.id))
-              .toList();
+      final appointments = snapshot.docs
+          .map((doc) => Appointment.fromMap(doc.data(), doc.id))
+          .toList();
 
       return Result.success(appointments);
     } catch (e) {
@@ -31,11 +29,10 @@ class AppointmentController {
   // Get appointment by ID - no index needed for document lookup
   Future<Result<Appointment>> getAppointmentById(String id) async {
     try {
-      final doc =
-          await _firebaseService.firestore
-              .collection('appointments')
-              .doc(id)
-              .get();
+      final doc = await _firebaseService.firestore
+          .collection('appointments')
+          .doc(id)
+          .get();
 
       if (!doc.exists) {
         return Result.error('Appointment not found');
@@ -69,9 +66,10 @@ class AppointmentController {
       }
 
       // Create appointment in Firestore
-      final docRef = await _firebaseService.firestore
-          .collection('appointments')
-          .add(appointment.toMap());
+      final docRef = await _firebaseService.addDocument(
+        'appointments',
+        appointment.toMap(),
+      );
 
       // Update time slot booking count
       await _incrementTimeSlotBooking(appointment.timeSlotId);
@@ -178,24 +176,19 @@ class AppointmentController {
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
       // Query time slots by doctor and date - uses composite index
-      final snapshot =
-          await _firebaseService.firestore
-              .collection('time_slots')
-              .where('doctorId', isEqualTo: doctorId)
-              .where(
-                'date',
-                isGreaterThanOrEqualTo: startOfDay.toIso8601String(),
-              )
-              .where('date', isLessThanOrEqualTo: endOfDay.toIso8601String())
-              .where('isActive', isEqualTo: true)
-              .orderBy('date')
-              .orderBy('startTime')
-              .get();
+      final snapshot = await _firebaseService.firestore
+          .collection('time_slots')
+          .where('doctorId', isEqualTo: doctorId)
+          .where('date', isGreaterThanOrEqualTo: startOfDay.toIso8601String())
+          .where('date', isLessThanOrEqualTo: endOfDay.toIso8601String())
+          .where('isActive', isEqualTo: true)
+          .orderBy('date')
+          .orderBy('startTime')
+          .get();
 
-      final timeSlots =
-          snapshot.docs
-              .map((doc) => TimeSlot.fromMap({...doc.data(), 'id': doc.id}))
-              .toList();
+      final timeSlots = snapshot.docs
+          .map((doc) => TimeSlot.fromMap({...doc.data(), 'id': doc.id}))
+          .toList();
 
       return Result.success(timeSlots);
     } catch (e) {
@@ -209,11 +202,10 @@ class AppointmentController {
     DateTime date,
   ) async {
     try {
-      final doc =
-          await _firebaseService.firestore
-              .collection('time_slots')
-              .doc(timeSlotId)
-              .get();
+      final doc = await _firebaseService.firestore
+          .collection('time_slots')
+          .doc(timeSlotId)
+          .get();
 
       if (!doc.exists) {
         return Result.error('Time slot not found');
@@ -250,17 +242,15 @@ class AppointmentController {
     String patientId,
   ) async {
     try {
-      final snapshot =
-          await _firebaseService.firestore
-              .collection('appointments')
-              .where('patientId', isEqualTo: patientId)
-              .orderBy('dateTime', descending: true)
-              .get();
+      final snapshot = await _firebaseService.firestore
+          .collection('appointments')
+          .where('patientId', isEqualTo: patientId)
+          .orderBy('dateTime', descending: true)
+          .get();
 
-      final appointments =
-          snapshot.docs
-              .map((doc) => Appointment.fromMap(doc.data(), doc.id))
-              .toList();
+      final appointments = snapshot.docs
+          .map((doc) => Appointment.fromMap(doc.data(), doc.id))
+          .toList();
 
       return Result.success(appointments);
     } catch (e) {
@@ -273,17 +263,15 @@ class AppointmentController {
     String doctorId,
   ) async {
     try {
-      final snapshot =
-          await _firebaseService.firestore
-              .collection('appointments')
-              .where('doctorId', isEqualTo: doctorId)
-              .orderBy('dateTime', descending: true)
-              .get();
+      final snapshot = await _firebaseService.firestore
+          .collection('appointments')
+          .where('doctorId', isEqualTo: doctorId)
+          .orderBy('dateTime', descending: true)
+          .get();
 
-      final appointments =
-          snapshot.docs
-              .map((doc) => Appointment.fromMap(doc.data(), doc.id))
-              .toList();
+      final appointments = snapshot.docs
+          .map((doc) => Appointment.fromMap(doc.data(), doc.id))
+          .toList();
 
       return Result.success(appointments);
     } catch (e) {
@@ -297,24 +285,19 @@ class AppointmentController {
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
-      final snapshot =
-          await _firebaseService.firestore
-              .collection('appointments')
-              .where(
-                'dateTime',
-                isGreaterThanOrEqualTo: startOfDay.toIso8601String(),
-              )
-              .where(
-                'dateTime',
-                isLessThanOrEqualTo: endOfDay.toIso8601String(),
-              )
-              .orderBy('dateTime')
-              .get();
+      final snapshot = await _firebaseService.firestore
+          .collection('appointments')
+          .where(
+            'dateTime',
+            isGreaterThanOrEqualTo: startOfDay.toIso8601String(),
+          )
+          .where('dateTime', isLessThanOrEqualTo: endOfDay.toIso8601String())
+          .orderBy('dateTime')
+          .get();
 
-      final appointments =
-          snapshot.docs
-              .map((doc) => Appointment.fromMap(doc.data(), doc.id))
-              .toList();
+      final appointments = snapshot.docs
+          .map((doc) => Appointment.fromMap(doc.data(), doc.id))
+          .toList();
 
       return Result.success(appointments);
     } catch (e) {

@@ -11,14 +11,13 @@ class MyFatoorahService {
   MyFatoorahService({http.Client? httpClient}) : _httpClient = httpClient ?? http.Client();
 
   Future<Result<Map<String, dynamic>>> generatePaymentLink({
-    required double amount,
-    required String currency,
     required String customerName,
     required String customerMobile,
-    required String customerEmail, // MyFatoorah often requires email
-    required String orderId, // Your internal payment/order ID
-    required String callbackUrl,
+    required String paymentId, // Your internal payment/order ID
+    required double amount,
+    String? customerEmail,
     String language = 'en',
+    String currency = 'KWD', // Default to KWD, change as needed
   }) async {
     final url = '${PaymentConfig.baseUrl}/v2/SendPayment';
     final headers = {
@@ -30,15 +29,13 @@ class MyFatoorahService {
       'NotificationOption': 'LNK', // To get a payment link
       'InvoiceValue': amount,
       'CurrencyIso': currency,
-      'CallBackUrl': callbackUrl,
-      'ErrorUrl': callbackUrl, // Or a specific error URL
+      'CallBackUrl': PaymentConfig.callbackUrl,
+      'ErrorUrl': PaymentConfig.callbackUrl, // Or a specific error URL
       'Language': language,
       'CustomerMobile': customerMobile,
       'CustomerEmail': customerEmail,
       'DisplayCurrencyIso': currency,
-      // 'PaymentMethodId': 2, // Optional: Specify a payment method ID, e.g., 2 for KNET
-      'UserDefinedField': orderId, // Can be used to store your internal paymentId
-      // Add other necessary fields as per MyFatoorah documentation
+      'UserDefinedField': paymentId, // Can be used to store your internal paymentId
     });
 
     try {
@@ -54,7 +51,7 @@ class MyFatoorahService {
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        if (responseData['IsSuccess'] == true && responseData['Data'] != null && responseData['Data']['PaymentURL'] != null) {
+        if (responseData['IsSuccess'] == true && responseData['Data'] != null && responseData['Data']['InvoiceURL'] != null) {
           return Result.success(responseData['Data']); // Contains InvoiceId, PaymentURL etc.
         } else {
           return Result.error(responseData['Message'] ?? 'Failed to generate payment link from MyFatoorah');

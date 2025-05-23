@@ -9,9 +9,9 @@ class Payment {
   final String patientId;
   final String doctorId;
   final double amount;
-  final String currency;
+  final String? currency;
   final PaymentStatus status;
-  final String paymentMethod;
+  final String? paymentMethod;
   final String? invoiceId;
   final String? transactionId;
   final String? paymentLink;
@@ -27,9 +27,9 @@ class Payment {
     required this.patientId,
     required this.doctorId,
     required this.amount,
-    required this.currency,
+    this.currency,
     required this.status,
-    required this.paymentMethod,
+    this.paymentMethod,
     this.invoiceId,
     this.transactionId,
     this.paymentLink,
@@ -104,10 +104,9 @@ class Payment {
       appointmentId: map['appointmentId'] ?? '',
       patientId: map['patientId'] ?? '',
       doctorId: map['doctorId'] ?? '',
-      amount:
-          (map['amount'] is int)
-              ? (map['amount'] as int).toDouble()
-              : (map['amount'] as double? ?? 0.0),
+      amount: (map['amount'] is int)
+          ? (map['amount'] as int).toDouble()
+          : (map['amount'] as double? ?? 0.0),
       currency: map['currency'] ?? 'KWD',
       status: _parseStatus(map['status'] ?? 'pending'),
       paymentMethod: map['paymentMethod'] ?? 'online',

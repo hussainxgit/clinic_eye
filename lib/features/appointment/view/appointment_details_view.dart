@@ -99,15 +99,14 @@ final appointmentPaymentProvider = FutureProvider.family<Payment?, String>((
   appointmentId,
 ) async {
   try {
-    final querySnapshot =
-        await ref
-            .read(firebaseServiceProvider)
-            .firestore
-            .collection('payments')
-            .where('appointmentId', isEqualTo: appointmentId)
-            .orderBy('createdAt', descending: true)
-            .limit(1)
-            .get();
+    final querySnapshot = await ref
+        .read(firebaseServiceProvider)
+        .firestore
+        .collection('payments')
+        .where('appointmentId', isEqualTo: appointmentId)
+        .orderBy('createdAt', descending: true)
+        .limit(1)
+        .get();
 
     if (querySnapshot.docs.isEmpty) return null;
 
@@ -137,8 +136,8 @@ class AppointmentDetailsView extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.edit),
             tooltip: 'Edit Appointment',
-            onPressed:
-                () => _navigateToEditAppointment(context, ref, appointmentId),
+            onPressed: () =>
+                _navigateToEditAppointment(context, ref, appointmentId),
           ),
         ],
       ),
@@ -264,52 +263,44 @@ class AppointmentDetailsView extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           patientAsync.when(
-            data:
-                (patient) =>
-                    patient != null
-                        ? _buildPatientCard(context, patient)
-                        : const Card(
-                          child: Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Text('Patient information not available'),
-                          ),
-                        ),
-            loading:
-                () => const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: CircularProgressIndicator()),
+            data: (patient) => patient != null
+                ? _buildPatientCard(context, patient)
+                : const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text('Patient information not available'),
+                    ),
                   ),
-                ),
-            error:
-                (error, stack) => Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('Error loading patient: $error'),
-                  ),
-                ),
+            loading: () => const Card(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ),
+            error: (error, stack) => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text('Error loading patient: $error'),
+              ),
+            ),
           ),
           const SizedBox(height: 24),
           paymentAsync.when(
-            data:
-                (payment) =>
-                    payment != null
-                        ? _buildPaymentCard(context, ref, payment, appointment)
-                        : _buildNoPaymentCard(context, ref, appointment),
-            loading:
-                () => const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                ),
-            error:
-                (error, stack) => Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('Error loading payment: $error'),
-                  ),
-                ),
+            data: (payment) => payment != null
+                ? _buildPaymentCard(context, ref, payment, appointment)
+                : _buildNoPaymentCard(context, ref, appointment),
+            loading: () => const Card(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ),
+            error: (error, stack) => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text('Error loading payment: $error'),
+              ),
+            ),
           ),
           const SizedBox(height: 24),
           _buildActionButtons(context, ref, appointment),
@@ -360,9 +351,9 @@ class AppointmentDetailsView extends ConsumerWidget {
               decoration: BoxDecoration(
                 color:
                     appointment.paymentStatus ==
-                            appointment_model.PaymentStatus.paid
-                        ? Colors.green
-                        : Colors.orange,
+                        appointment_model.PaymentStatus.paid
+                    ? Colors.green
+                    : Colors.orange,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
@@ -400,16 +391,14 @@ class AppointmentDetailsView extends ConsumerWidget {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundImage:
-                      patient.avatarUrl != null
-                          ? NetworkImage(patient.avatarUrl!)
-                          : null,
+                  backgroundImage: patient.avatarUrl != null
+                      ? NetworkImage(patient.avatarUrl!)
+                      : null,
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  child:
-                      patient.avatarUrl == null
-                          ? Text(patient.name[0].toUpperCase())
-                          : null,
+                  child: patient.avatarUrl == null
+                      ? Text(patient.name[0].toUpperCase())
+                      : null,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -515,7 +504,6 @@ class AppointmentDetailsView extends ConsumerWidget {
                   'Payment Method',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
-                Text(payment.paymentMethod.toUpperCase()),
               ],
             ),
             const SizedBox(height: 8),
@@ -548,13 +536,13 @@ class AppointmentDetailsView extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed:
-                          () => _resendPaymentLink(context, ref, payment),
+                      onPressed: () => {},
                       icon: const Icon(Icons.send),
                       label: const Text('Resend Payment Link'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            Theme.of(context).colorScheme.secondary,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.secondary,
                       ),
                     ),
                   ),
@@ -565,8 +553,8 @@ class AppointmentDetailsView extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed:
-                          () => _checkPaymentStatus(context, ref, payment),
+                      onPressed: () =>
+                          _checkPaymentStatus(context, ref, payment),
                       icon: const Icon(Icons.refresh),
                       label: const Text('Check Payment Status'),
                     ),
@@ -642,12 +630,8 @@ class AppointmentDetailsView extends ConsumerWidget {
               children: [
                 if (canCancel)
                   OutlinedButton.icon(
-                    onPressed:
-                        () => _confirmCancelAppointment(
-                          context,
-                          ref,
-                          appointment,
-                        ),
+                    onPressed: () =>
+                        _confirmCancelAppointment(context, ref, appointment),
                     icon: const Icon(Icons.cancel, color: Colors.red),
                     label: const Text('Cancel Appointment'),
                     style: OutlinedButton.styleFrom(
@@ -656,18 +640,23 @@ class AppointmentDetailsView extends ConsumerWidget {
                   ),
                 if (canComplete)
                   OutlinedButton.icon(
-                    onPressed:
-                        () => _markAsCompleted(context, ref, appointment),
+                    onPressed: () =>
+                        _markAsCompleted(context, ref, appointment),
                     icon: const Icon(Icons.check_circle),
                     label: const Text('Mark as Completed'),
                   ),
                 if (canSendReminder)
                   OutlinedButton.icon(
-                    onPressed:
-                        () => _sendReminderSms(context, ref, appointment),
+                    onPressed: () =>
+                        _sendReminderSms(context, ref, appointment),
                     icon: const Icon(Icons.message),
                     label: const Text('Send Reminder SMS'),
                   ),
+                OutlinedButton.icon(
+                  onPressed: () => _createPayment(context, ref, appointment),
+                  icon: const Icon(Icons.payment),
+                  label: const Text('Send Payment Link'),
+                ),
               ],
             ),
           ],
@@ -697,19 +686,18 @@ class AppointmentDetailsView extends ConsumerWidget {
   ) {
     showDialog(
       context: context,
-      builder:
-          (context) => ConfirmDialog(
-            title: 'Cancel Appointment',
-            content:
-                'Are you sure you want to cancel this appointment? This action cannot be undone.',
-            confirmText: 'Yes, Cancel',
-            cancelText: 'No, Keep',
-            onConfirm: () {
-              Navigator.of(context).pop();
-              _cancelAppointment(context, ref, appointment);
-            },
-            onCancel: () => Navigator.of(context).pop(),
-          ),
+      builder: (context) => ConfirmDialog(
+        title: 'Cancel Appointment',
+        content:
+            'Are you sure you want to cancel this appointment? This action cannot be undone.',
+        confirmText: 'Yes, Cancel',
+        cancelText: 'No, Keep',
+        onConfirm: () {
+          Navigator.of(context).pop();
+          _cancelAppointment(context, ref, appointment);
+        },
+        onCancel: () => Navigator.of(context).pop(),
+      ),
     );
   }
 
@@ -821,30 +809,30 @@ class AppointmentDetailsView extends ConsumerWidget {
 
     final createPaymentResult = await ref
         .read(paymentControllerProvider)
-        .createAndGeneratePayment(
-          patientName: appointment.patientName,
-          patientMobile: patient.phone,
-          appointmentId: appointment.id,
+        .generatePaymentLink(
           patientId: appointment.patientId,
-          doctorId: appointment.patientId,
+          doctorId: appointment.doctorId,
+          customerName: appointment.patientName,
+          customerMobile: patient.phone,
+          appointmentId: appointment.id,
           amount: 25.0,
         );
-    if (!context.mounted) return;
-    final sendLinkResult = await _sendPaymentLink(
-      ref,
-      context,
-      createPaymentResult.data!,
-      patient.name,
-    );
+    // if (!context.mounted) return;
+    // final sendLinkResult = await _sendPaymentLink(
+    //   ref,
+    //   context,
+    //   createPaymentResult.data!,
+    //   patient.name,
+    // );
 
-    if (!sendLinkResult) {
-      _dismissLoadingOverlay(loadingOverlay);
-      return;
-    }
+    // if (!sendLinkResult) {
+    //   _dismissLoadingOverlay(loadingOverlay);
+    //   return;
+    // }
 
-    _dismissLoadingOverlay(loadingOverlay);
-    if (!context.mounted) return;
-    _showSuccessMessage(context, 'Payment link sent successfully');
+    // _dismissLoadingOverlay(loadingOverlay);
+    // if (!context.mounted) return;
+    // _showSuccessMessage(context, 'Payment link sent successfully');
   }
 
   // Get patient information
@@ -852,40 +840,13 @@ class AppointmentDetailsView extends ConsumerWidget {
     return await ref.read(appointmentPatientProvider(patientId).future);
   }
 
-  // Send payment link via SMS
-  Future<bool> _sendPaymentLink(
-    WidgetRef ref,
-    BuildContext context,
-    Payment payment,
-    String patientName,
-  ) async {
-    if (!context.mounted) return false;
-
-    final sendLinkResult = await ref
-        .read(paymentControllerProvider)
-        .sendPaymentLink(payment: payment);
-
-    if (!context.mounted) return false;
-
-    if (!sendLinkResult.isSuccess) {
-      _showErrorMessage(
-        context,
-        'Failed to send payment link: ${sendLinkResult.errorMessage}',
-      );
-      return false;
-    }
-
-    return true;
-  }
-
   // Show loading overlay
   OverlayEntry _showLoadingOverlay(BuildContext context) {
     final overlay = OverlayEntry(
-      builder:
-          (context) => Container(
-            color: Colors.black.withOpacity(0.3),
-            child: const Center(child: CircularProgressIndicator()),
-          ),
+      builder: (context) => Container(
+        color: Colors.black.withOpacity(0.3),
+        child: const Center(child: CircularProgressIndicator()),
+      ),
     );
 
     Overlay.of(context).insert(overlay);
@@ -915,62 +876,34 @@ class AppointmentDetailsView extends ConsumerWidget {
     );
   }
 
-  Future<void> _resendPaymentLink(
-    BuildContext context,
-    WidgetRef ref,
-    Payment payment,
-  ) async {
-    try {
-      final result = await ref
-          .read(paymentControllerProvider)
-          .sendPaymentLink(payment: payment);
-      if (!context.mounted) return;
-      if (result.isSuccess) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment link resent successfully')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${result.errorMessage}')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    }
-  }
-
   Future<void> _checkPaymentStatus(
     BuildContext context,
     WidgetRef ref,
     Payment payment,
   ) async {
-    print('Checking payment status for payment ID: ${payment.id}');
-    try {
-      final status = await ref
-          .read(paymentControllerProvider)
-          .checkPaymentStatus(payment.id);
-      if (!context.mounted) return;
-      if (status.isSuccess) {
-        ref.invalidate(appointmentPaymentProvider(payment.appointmentId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Payment status: ${status.data.toString()}')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${status.errorMessage}')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error checking payment status: $e')),
-        );
-        print('Error checking payment status: $e');
-      }
-    }
+    // print('Checking payment status for payment ID: ${payment.id}');
+    // try {
+    //   final status = await ref
+    //       .read(paymentControllerProvider)
+    //       .checkPaymentStatus(payment.id);
+    //   if (!context.mounted) return;
+    //   if (status.isSuccess) {
+    //     ref.invalidate(appointmentPaymentProvider(payment.appointmentId));
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       SnackBar(content: Text('Payment status: ${status.data.toString()}')),
+    //     );
+    //   } else {
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       SnackBar(content: Text('Error: ${status.errorMessage}')),
+    //     );
+    //   }
+    // } catch (e) {
+    //   if (context.mounted) {
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       SnackBar(content: Text('Error checking payment status: $e')),
+    //     );
+    //     print('Error checking payment status: $e');
+    //   }
+    // }
   }
 }
