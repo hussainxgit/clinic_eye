@@ -1,4 +1,5 @@
 // config/sms_config.dart
+import 'package:clinic_eye/core/utils/boali_date_extenstions.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class SmsConfig {
@@ -34,5 +35,14 @@ class SmsConfig {
     String doctorName,
   ) {
     return 'Dear $patientName, your appointment has been confirmed for $appointmentDate with Dr. $doctorName. Thank you for choosing Eye Clinic.';
+  }
+
+  static String appointmentPaymentTemplate(
+    String patientName,
+    DateTime appointmentDate,
+    String paymentLink,
+    double amount,
+  ) {
+    return '$patientName, confirm your ${appointmentDate.formattedDate} booking by paying $amount KWD at $paymentLink. Eye Clinic';
   }
 }

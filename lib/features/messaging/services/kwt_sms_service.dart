@@ -32,14 +32,8 @@ class KwtSmsService {
         Uri.parse(SmsConfig.sendEndpoint),
         body: payload,
       );
-
-      print('KWT SMS Request Payload: $payload');
-      print('KWT SMS Response: ${response.body}');
-      print('KWT SMS Status Code: ${response.statusCode}');
-
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final responseBody = response.body.trim();
-
         if (responseBody.startsWith('OK:')) {
           final parts = responseBody.split(':');
           if (parts.length >= 6) {
@@ -79,6 +73,59 @@ class KwtSmsService {
       print('Error calling KWT SMS API: \$e');
       return Result.error('Exception during KWT SMS API call: \$e');
     }
+  }
+
+  Future<Result<SmsResponse>> sendAppointmentReminder({
+    required String mobileNumber,
+    required String patientName,
+    required String appointmentDate,
+    required String doctorName,
+  }) {
+    final message = SmsConfig.appointmentReminderTemplate(
+      patientName,
+      appointmentDate,
+      doctorName,
+    );
+    return sendSms(
+      mobileNumber: mobileNumber,
+      message: message,
+    );
+  }
+
+  Future<Result<SmsResponse>> sendAppointmentConfirmation({
+    required String mobileNumber,
+    required String patientName,
+    required String appointmentDate,
+    required String doctorName,
+  }) {
+    final message = SmsConfig.appointmentConfirmationTemplate(
+      patientName,
+      appointmentDate,
+      doctorName,
+    );
+    return sendSms(
+      mobileNumber: mobileNumber,
+      message: message,
+    );
+  }
+
+  Future<Result<SmsResponse>> sendAppointmentPayment({
+    required String mobileNumber,
+    required String patientName,
+    required DateTime appointmentDate,
+    required String paymentLink,
+    required double amount,
+  }) {
+    final message = SmsConfig.appointmentPaymentTemplate(
+      patientName,
+      appointmentDate,
+      paymentLink,
+      amount,
+    );
+    return sendSms(
+      mobileNumber: mobileNumber,
+      message: message,
+    );
   }
 }
 

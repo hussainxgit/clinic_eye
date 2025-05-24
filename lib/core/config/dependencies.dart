@@ -31,8 +31,7 @@ final messegingControllerProvider = Provider<MessegingController>((ref) {
 final paymentControllerProvider = Provider<PaymentController>((ref) {
   final firebaseService = ref.watch(firebaseServiceProvider);
   final myFatoorahService = ref.watch(myFatoorahServiceProvider);
-  final kwtSmsService = ref.watch(kwtSmsServiceProvider);
-  return PaymentController(firebaseService, myFatoorahService, kwtSmsService);
+  return PaymentController(firebaseService, myFatoorahService);
 });
 
 final doctorControllerProvider = Provider<DoctorController>((ref) {
