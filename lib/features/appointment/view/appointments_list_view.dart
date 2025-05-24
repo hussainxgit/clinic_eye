@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/views/widgets/common/generic_filter_dialog.dart';
 import '../model/appointment.dart';
 import '../provider/appointment_provider.dart';
-import 'appointment_details_view.dart';
+import 'appointment_details/appointment_details_view.dart';
 
 // StateProvider to hold the current filter values
 final appointmentFiltersProvider = StateProvider<Map<String, dynamic>>(

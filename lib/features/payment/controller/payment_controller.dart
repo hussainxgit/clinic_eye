@@ -115,4 +115,33 @@ class PaymentController {
       return Result.error('An unexpected error occurred: ${e.toString()}');
     }
   }
+
+  Future<Result<Payment>> checkPaymentStatus({
+    required String paymentId,
+  }) async {
+    try {
+      // Fetch the payment record from Firebase using the paymentId.
+      final paymentDoc = await _firebaseService.getDocument(
+        'payments',
+        paymentId,
+      );
+
+      if (!paymentDoc.exists) {
+        return Result.error('Payment record not found.');
+      }
+
+      // Convert the document data to a Payment object.
+      Payment payment = Payment.fromMap(
+        paymentDoc.data() as Map<String, dynamic>,
+        paymentDoc.id,
+      );
+
+      // Check the status of the payment.
+      return Result.success(payment);
+    } catch (e) {
+      return Result.error(
+        'An error occurred while checking payment status: ${e.toString()}',
+      );
+    }
+  }
 }
