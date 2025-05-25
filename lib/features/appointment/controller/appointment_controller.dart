@@ -351,25 +351,3 @@ class AppointmentController {
     });
   }
 }
-
-  // Create payment for appointment - no index needed
-  // Future<Result<void>> createPaymentForAppointment(
-  //   Appointment appointment,
-  // ) async {
-  //   try {
-  //     // Get service amount based on doctor's specialty or a default value
-  //     double amount = 15.0; // Default consultation fee
-
-  //     // Create payment record
-  //     await _paymentService.createPayment(
-  //       appointmentId: appointment.id,
-  //       patientId: appointment.patientId,
-  //       doctorId: appointment.doctorId,
-  //       amount: amount,
-  //     );
-
-  //     return Result.success(null);
-  //   } catch (e) {
-  //     return Result.error(e.toString());
-  //   }
-  // }

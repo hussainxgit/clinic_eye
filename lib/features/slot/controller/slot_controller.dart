@@ -4,34 +4,89 @@ import 'package:clinic_eye/core/services/firebase/firebase_service.dart';
 import 'package:clinic_eye/features/slot/model/slot.dart';
 import 'package:clinic_eye/features/slot/model/time_slot.dart';
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 
 class SlotController {
   final FirebaseService _firebaseService;
 
   SlotController(this._firebaseService);
 
-  // Create a new slot
-  Future<Result<Slot>> createSlot(Slot slot) async {
+  // Create a new slot, letting Firebase generate the ID
+  Future<Result<Slot>> createSlot({
+    required String doctorId,
+    required DateTime date,
+    bool isActive = true,
+  }) async {
     try {
-      final docRef = await _firebaseService.addDocument('slots', slot.toMap());
-      return Result.success(slot.copyWith(id: docRef.id));
+      final slotData = {
+        'doctorId': doctorId,
+        'date': date.toIso8601String(),
+        'isActive': isActive,
+      };
+      final docRef = await _firebaseService.addDocument('slots', slotData);
+      // Construct the Slot object with the Firebase-generated ID
+      final newSlot = Slot(
+        id: docRef.id,
+        doctorId: doctorId,
+        date: date,
+        isActive: isActive,
+      );
+      return Result.success(newSlot);
     } catch (e) {
       return Result.error(e.toString());
     }
   }
 
-  // Create a new time slot
-  Future<Result<TimeSlot>> createTimeSlot(TimeSlot timeSlot) async {
+  // Create a new time slot, letting Firebase generate the ID
+  Future<Result<TimeSlot>> createTimeSlot({
+    required String slotId,
+    required String doctorId,
+    required DateTime date,
+    required TimeOfDay startTime,
+    required Duration duration,
+    required int maxPatients,
+    int bookedPatients = 0,
+    bool isActive = true,
+  }) async {
     try {
-      // Validate the time slot
-      timeSlot.validate();
+      // Validate parameters before sending to Firebase
+      if (duration.inMinutes < 15) {
+        return Result.error('Slot duration must be at least 15 minutes');
+      }
+      if (maxPatients <= 0) {
+        return Result.error('Max patients must be greater than 0');
+      }
+      if (bookedPatients > maxPatients) {
+        return Result.error('Booked patients cannot exceed max patients');
+      }
+
+      final timeSlotData = {
+        'slotId': slotId,
+        'doctorId': doctorId,
+        'date': date.toIso8601String(),
+        'startTime': '${startTime.hour}:${startTime.minute}',
+        'duration': duration.inMinutes,
+        'maxPatients': maxPatients,
+        'bookedPatients': bookedPatients,
+        'isActive': isActive,
+      };
 
       final docRef = await _firebaseService.addDocument(
         'time_slots',
-        timeSlot.toMap(),
+        timeSlotData,
       );
-      return Result.success(timeSlot.copyWith(id: docRef.id));
+      // Construct the TimeSlot object with the Firebase-generated ID
+      final newTimeSlot = TimeSlot(
+        id: docRef.id,
+        slotId: slotId,
+        doctorId: doctorId,
+        date: date,
+        startTime: startTime,
+        duration: duration,
+        maxPatients: maxPatients,
+        bookedPatients: bookedPatients,
+        isActive: isActive,
+      );
+      return Result.success(newTimeSlot);
     } catch (e) {
       return Result.error(e.toString());
     }
@@ -94,7 +149,6 @@ class SlotController {
   }) async {
     try {
       int createdCount = 0;
-      final uuid = Uuid();
 
       // Iterate through each day in the range
       for (
@@ -108,36 +162,36 @@ class SlotController {
         }
 
         // Create a slot for this day
-        final slot = Slot(
-          id: uuid.v4(),
+        final slotResult = await createSlot(
           doctorId: doctorId,
           date: date,
           isActive: true,
         );
 
-        final slotResult = await createSlot(slot);
-
         if (slotResult.isError) {
+          // Optionally log the error: print('Error creating slot for $date: ${slotResult.error}');
           continue; // Skip if slot creation failed
         }
+        
+        final createdSlot = slotResult.data!;
 
         // Create time slots for this day
-        for (final startTime in dailyTimeSlots) {
-          final timeSlot = TimeSlot(
-            id: uuid.v4(),
-            slotId: slotResult.data!.id,
+        for (final timeOfDay in dailyTimeSlots) {
+          final timeSlotResult = await createTimeSlot(
+            slotId: createdSlot.id, // Use ID from the newly created slot
             doctorId: doctorId,
             date: date,
-            startTime: startTime,
+            startTime: timeOfDay,
             duration: slotDuration,
             maxPatients: maxPatients,
             isActive: true,
+            // bookedPatients defaults to 0 in createTimeSlot
           );
-
-          final timeSlotResult = await createTimeSlot(timeSlot);
 
           if (timeSlotResult.isSuccess) {
             createdCount++;
+          } else {
+            // Optionally log the error: print('Error creating time slot for ${createdSlot.id} at $timeOfDay: ${timeSlotResult.error}');
           }
         }
       }

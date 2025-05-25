@@ -75,6 +75,34 @@ class AppointmentInfoCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                const Icon(Icons.medical_services, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Status',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      Text(
+                        appointment.status.name,
+                        style: TextStyle(
+                          color:
+                              appointment.status ==
+                                  appointment_model.AppointmentStatus.completed
+                              ? Colors.green
+                              : appointment.status ==
+                                    appointment_model
+                                        .AppointmentStatus
+                                        .scheduled
+                              ? Colors.orange
+                              : Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
             if (appointment.notes != null && appointment.notes!.isNotEmpty) ...[

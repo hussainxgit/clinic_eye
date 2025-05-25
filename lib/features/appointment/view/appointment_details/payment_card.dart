@@ -28,6 +28,33 @@ extension PaymentStatusX on PaymentStatus {
   }
 }
 
+// Provider to fetch appointment details
+final appointmentDetailsProvider =
+    FutureProvider.family<Result<appointment_model.Appointment>, String>((
+      ref,
+      appointmentId,
+    ) {
+      final appointmentController = ref.watch(appointmentControllerProvider);
+      return appointmentController.getAppointmentById(appointmentId);
+    });
+
+// Provider to fetch patient details for the appointment
+final appointmentPatientProvider = FutureProvider.family<Patient?, String>((
+  ref,
+  patientId,
+) async {
+  final patientsResult = ref.watch(getAllPatientsProvider).value;
+  if (patientsResult == null || !patientsResult.isSuccess) return null;
+
+  final patients = patientsResult.data ?? [];
+  try {
+    return patients.firstWhere((p) => p.id == patientId);
+  } catch (e) {
+    return null;
+  }
+});
+
+// Provider to fetch payment details for the appointment
 final appointmentPaymentProvider = FutureProvider.family<Payment?, String>((
   ref,
   appointmentId,
@@ -55,7 +82,7 @@ final appointmentPaymentProvider = FutureProvider.family<Payment?, String>((
 class PaymentCard extends ConsumerWidget {
   final appointment_model.Appointment appointment;
 
-  PaymentCard({super.key, required this.appointment});
+  const PaymentCard({super.key, required this.appointment});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -239,57 +266,6 @@ class PaymentCard extends ConsumerWidget {
   Future<Patient?> _getPatientInfo(WidgetRef ref, String patientId) async {
     return await ref.read(appointmentPatientProvider(patientId).future);
   }
-
-  // Provider to fetch appointment details
-  final appointmentDetailsProvider =
-      FutureProvider.family<Result<appointment_model.Appointment>, String>((
-        ref,
-        appointmentId,
-      ) {
-        final appointmentController = ref.watch(appointmentControllerProvider);
-        return appointmentController.getAppointmentById(appointmentId);
-      });
-
-  // Provider to fetch patient details for the appointment
-  final appointmentPatientProvider = FutureProvider.family<Patient?, String>((
-    ref,
-    patientId,
-  ) async {
-    final patientsResult = ref.watch(getAllPatientsProvider).value;
-    if (patientsResult == null || !patientsResult.isSuccess) return null;
-
-    final patients = patientsResult.data ?? [];
-    try {
-      return patients.firstWhere((p) => p.id == patientId);
-    } catch (e) {
-      return null;
-    }
-  });
-
-  // Provider to fetch payment details for the appointment
-  final appointmentPaymentProvider = FutureProvider.family<Payment?, String>((
-    ref,
-    appointmentId,
-  ) async {
-    try {
-      final querySnapshot = await ref
-          .read(firebaseServiceProvider)
-          .firestore
-          .collection('payments')
-          .where('appointmentId', isEqualTo: appointmentId)
-          .orderBy('createdAt', descending: true)
-          .limit(1)
-          .get();
-
-      if (querySnapshot.docs.isEmpty) return null;
-
-      final doc = querySnapshot.docs.first;
-      return Payment.fromMap(doc.data(), doc.id);
-    } catch (e) {
-      print('Error fetching payment: $e');
-      return null;
-    }
-  });
 
   _buildPaymentDetails(BuildContext context, WidgetRef ref, Payment payment) {
     return Card(

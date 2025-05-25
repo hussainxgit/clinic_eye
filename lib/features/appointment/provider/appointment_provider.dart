@@ -86,10 +86,3 @@ final allAppointmentsProvider = FutureProvider<Result<List<Appointment>>>((
   final appointmentController = ref.watch(appointmentControllerProvider);
   return appointmentController.getAllAppointments();
 });
-
-// Provider for creating a payment for an appointment
-// final createPaymentForAppointmentProvider =
-//     FutureProvider.family<Result<void>, Appointment>((ref, appointment) {
-//       final appointmentController = ref.watch(appointmentControllerProvider);
-//       return appointmentController.createPaymentForAppointment(appointment);
-//     });
