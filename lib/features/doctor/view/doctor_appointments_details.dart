@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:clinic_eye/core/locale/l10n/app_localizations.dart';
 
 import '../../../core/config/dependencies.dart';
 import '../../../core/models/result.dart';
@@ -118,10 +119,11 @@ class DoctorAppointmentsDetails extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(selectedDateProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Dr. ${doctor.name}\'s Appointments'),
+        title: Text(l10n.appointmentsReport), // Assuming this is a suitable title
         actions: [
           IconButton(
             icon: const Icon(Icons.today),
@@ -129,11 +131,11 @@ class DoctorAppointmentsDetails extends ConsumerWidget {
                 () =>
                     ref.read(selectedDateProvider.notifier).state =
                         DateTime.now(),
-            tooltip: 'Go to Today',
+            tooltip: l10n.today,
           ),
           IconButton(
             icon: const Icon(Icons.edit_calendar_outlined),
-            tooltip: 'Manage Slots',
+            tooltip: l10n.manageSlots, // Needs a new key `manageSlots`
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -188,8 +190,8 @@ class AppointmentsListByDate extends ConsumerWidget {
     final appointmentsAsync = ref.watch(
       doctorAppointmentsByDateProvider(filter),
     );
-
-    final dateFormat = DateFormat('EEEE, MMMM d, yyyy');
+    final l10n = AppLocalizations.of(context)!;
+    final dateFormat = DateFormat('EEEE, MMMM d, yyyy', l10n.localeName);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -201,8 +203,8 @@ class AppointmentsListByDate extends ConsumerWidget {
         const SizedBox(height: 8),
         Text(
           doctor.isAvailable
-              ? 'Dr. ${doctor.name} is available on this date'
-              : 'Dr. ${doctor.name} is not available on this date',
+              ? 'Dr. ${doctor.name} ${l10n.isAvailableOnThisDate}' // Needs a new key `isAvailableOnThisDate`
+              : 'Dr. ${doctor.name} ${l10n.isNotAvailableOnThisDate}', // Needs a new key `isNotAvailableOnThisDate`
           style: TextStyle(
             color: doctor.isAvailable ? Colors.green : Colors.red,
             fontWeight: FontWeight.bold,
@@ -213,8 +215,8 @@ class AppointmentsListByDate extends ConsumerWidget {
           child: appointmentsAsync.when(
             data: (appointments) {
               if (appointments.isEmpty) {
-                return const Center(
-                  child: Text('No appointments scheduled for this date'),
+                return Center(
+                  child: Text(l10n.noAppointments), // Needs a new key `noAppointments` or similar like `noUpcomingAppointments`
                 );
               }
 
@@ -222,7 +224,7 @@ class AppointmentsListByDate extends ConsumerWidget {
                 itemCount: appointments.length,
                 itemBuilder: (context, index) {
                   final appointment = appointments[index];
-                  final timeFormat = DateFormat('h:mm a');
+                  final timeFormat = DateFormat('h:mm a', l10n.localeName);
 
                   return Card(
                     elevation: 2,
@@ -239,18 +241,18 @@ class AppointmentsListByDate extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Time: ${timeFormat.format(appointment.dateTime)}',
+                            '${l10n.time}: ${timeFormat.format(appointment.dateTime)}',
                           ),
                           Text(
-                            'Status: ${appointment.status.toString().split('.').last}',
+                            '${l10n.status}: ${appointment.status.toString().split('.').last}',
                           ),
                         ],
                       ),
                       trailing: Chip(
                         label: Text(
                           appointment.paymentStatus == PaymentStatus.paid
-                              ? 'Paid'
-                              : 'Unpaid',
+                              ? l10n.paid // Needs a new key `paid`
+                              : l10n.unpaid, // Needs a new key `unpaid`
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -275,8 +277,8 @@ class AppointmentsListByDate extends ConsumerWidget {
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Center(child: Text('Error: $error')),
+            loading: () => Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor))),
+            error: (error, stack) => Center(child: Text('${l10n.error}: $error')),
           ),
         ),
       ],
@@ -296,6 +298,7 @@ class DoctorAppointmentsCalendar extends ConsumerWidget {
     final doctorAppointmentsAsyncValue = ref.watch(
       doctorAppointmentsProvider(doctor.id),
     );
+    final l10n = AppLocalizations.of(context)!;
 
     // Create a map of dates that have appointments
     final Map<DateTime, List<Appointment>> appointmentsByDate = {};
@@ -326,9 +329,10 @@ class DoctorAppointmentsCalendar extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Select Date', style: Theme.of(context).textTheme.titleLarge),
+            Text(l10n.selectDate, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             TableCalendar(
+              locale: l10n.localeName,
               firstDay: DateTime.now().subtract(const Duration(days: 365)),
               lastDay: DateTime.now().add(const Duration(days: 365)),
               focusedDay: selectedDate,
@@ -379,7 +383,7 @@ class DoctorAppointmentsCalendar extends ConsumerWidget {
               data: (result) {
                 if (!result.isSuccess) {
                   print(result.errorMessage);
-                  return Text('Error: ${result.errorMessage}');
+                  return Text('${l10n.error}: ${result.errorMessage}');
                 }
 
                 final appointments = result.data ?? [];
@@ -395,7 +399,7 @@ class DoctorAppointmentsCalendar extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Appointment Stats',
+                      l10n.appointmentDetails, // Assuming 'Appointment Stats' can map to this
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
@@ -404,13 +408,15 @@ class DoctorAppointmentsCalendar extends ConsumerWidget {
                       children: [
                         _buildStatCard(
                           context,
-                          title: 'Total',
+                          l10n: l10n,
+                          title: l10n.all, // Assuming 'Total' maps to 'All'
                           value: appointments.length.toString(),
                           color: Theme.of(context).colorScheme.primary,
                         ),
                         _buildStatCard(
                           context,
-                          title: 'Today',
+                          l10n: l10n,
+                          title: l10n.today,
                           value: appointmentsForDay.length.toString(),
                           color: Theme.of(context).colorScheme.secondary,
                         ),
@@ -419,8 +425,8 @@ class DoctorAppointmentsCalendar extends ConsumerWidget {
                   ],
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Text('Error: $error'),
+              loading: () => Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor))),
+              error: (error, stack) => Text('${l10n.error}: $error'),
             ),
           ],
         ),
@@ -430,6 +436,7 @@ class DoctorAppointmentsCalendar extends ConsumerWidget {
 
   Widget _buildStatCard(
     BuildContext context, {
+    required AppLocalizations l10n, // Added l10n here
     required String title,
     required String value,
     required Color color,

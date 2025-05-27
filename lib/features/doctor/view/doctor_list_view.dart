@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:clinic_eye/core/locale/l10n/app_localizations.dart';
+
 import '../../../core/views/widgets/common/generic_filter_dialog.dart';
 import '../model/doctor.dart';
 import '../provider/doctor_provider.dart';
@@ -64,6 +66,7 @@ class DoctorListWithFilter extends ConsumerWidget {
     final filteredDoctors = ref.watch(filteredDoctorsProvider);
     final filters = ref.watch(doctorFiltersProvider);
     final hasActiveFilters = filters.isNotEmpty;
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,7 +75,7 @@ class DoctorListWithFilter extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Doctors List (${filteredDoctors.length})',
+              '${l10n.doctors} (${filteredDoctors.length})',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             Row(
@@ -86,13 +89,13 @@ class DoctorListWithFilter extends ConsumerWidget {
                     );
                   },
                   icon: const Icon(Icons.add),
-                  label: const Text('Add Doctor'),
+                  label: Text(l10n.add),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
                   onPressed: () => _showFilterDialog(context, ref),
                   icon: const Icon(Icons.filter_list),
-                  label: const Text('Filter'),
+                  label: Text(l10n.filter),
                   style:
                       hasActiveFilters
                           ? ElevatedButton.styleFrom(
@@ -115,7 +118,7 @@ class DoctorListWithFilter extends ConsumerWidget {
                 for (final filter in filters.entries)
                   Chip(
                     label: Text(
-                      _getFilterLabel(filter.key, filter.value),
+                      _getFilterLabel(filter.key, filter.value, l10n),
                       style: const TextStyle(fontSize: 12),
                     ),
                     deleteIcon: const Icon(Icons.close, size: 16),
@@ -131,8 +134,8 @@ class DoctorListWithFilter extends ConsumerWidget {
                     ref.read(doctorFiltersProvider.notifier).state = {};
                   },
                   icon: const Icon(Icons.clear_all, size: 16),
-                  label: const Text(
-                    'Clear All',
+                  label: Text(
+                    l10n.clearAllNotifications, // Assuming 'Clear All' is similar to 'Clear all notifications'
                     style: TextStyle(fontSize: 12),
                   ),
                 ),
@@ -143,8 +146,8 @@ class DoctorListWithFilter extends ConsumerWidget {
         Expanded(
           child:
               filteredDoctors.isEmpty
-                  ? const Center(
-                    child: Text('No doctors match the selected filters'),
+                  ? Center(
+                    child: Text(l10n.noDoctorsFound),
                   )
                   : ListView.builder(
                     itemCount: filteredDoctors.length,
@@ -183,7 +186,7 @@ class DoctorListWithFilter extends ConsumerWidget {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Specialty: ${doctor.specialty}'),
+                              Text('${l10n.doctorSpecialty}: ${doctor.specialty}'),
                               if (doctor.email != null)
                                 Text(
                                   doctor.email!,
@@ -193,7 +196,7 @@ class DoctorListWithFilter extends ConsumerWidget {
                           ),
                           trailing: Chip(
                             label: Text(
-                              doctor.isAvailable ? 'Available' : 'Unavailable',
+                              doctor.isAvailable ? l10n.availableSlots : l10n.noSlotsAvailable, // Assuming 'Available' and 'Unavailable' map to these
                               style: TextStyle(
                                 color:
                                     doctor.isAvailable
@@ -217,12 +220,12 @@ class DoctorListWithFilter extends ConsumerWidget {
     );
   }
 
-  String _getFilterLabel(String key, dynamic value) {
+  String _getFilterLabel(String key, dynamic value, AppLocalizations l10n) {
     switch (key) {
       case 'specialty':
-        return 'Specialty: $value';
+        return '${l10n.doctorSpecialty}: $value';
       case 'isAvailable':
-        return 'Status: ${value ? 'Available' : 'Unavailable'}';
+        return '${l10n.status}: ${value ? l10n.availableSlots : l10n.noSlotsAvailable}'; // Assuming 'Available' and 'Unavailable' map to these
       default:
         return '$key: $value';
     }
@@ -231,6 +234,7 @@ class DoctorListWithFilter extends ConsumerWidget {
   void _showFilterDialog(BuildContext context, WidgetRef ref) async {
     // Get current filters
     final currentFilters = ref.read(doctorFiltersProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     // Get dynamic specialties from the provider
     final specialties = ref.read(doctorSpecialtiesProvider);
@@ -246,20 +250,20 @@ class DoctorListWithFilter extends ConsumerWidget {
 
     // Create availability filter options
     final availabilityOptions = [
-      OptionItem<bool>(label: 'Available', value: true),
-      OptionItem<bool>(label: 'Unavailable', value: false),
+      OptionItem<bool>(label: l10n.availableSlots, value: true), // Assuming 'Available' maps to this
+      OptionItem<bool>(label: l10n.noSlotsAvailable, value: false), // Assuming 'Unavailable' maps to this
     ];
 
     // Create filter options
     final filterOptions = [
       FilterOption<String>(
-        label: 'Specialty',
+        label: l10n.doctorSpecialty,
         field: 'specialty',
         options: specialtyOptions,
         selectedValue: currentFilters['specialty'],
       ),
       FilterOption<bool>(
-        label: 'Availability',
+        label: l10n.status, // Assuming 'Availability' maps to 'Status'
         field: 'isAvailable',
         options: availabilityOptions,
         selectedValue: currentFilters['isAvailable'],
@@ -270,7 +274,7 @@ class DoctorListWithFilter extends ConsumerWidget {
     await showFilterDialog<Doctor>(
       context: context,
       filterOptions: filterOptions,
-      title: 'Filter Doctors',
+      title: '${l10n.filter} ${l10n.doctors}',
       onApply: (filterValues) {
         ref.read(doctorFiltersProvider.notifier).state = filterValues;
       },

@@ -1,3 +1,4 @@
+import 'package:clinic_eye/core/views/screens/settings_screen.dart';
 import 'package:clinic_eye/features/patient/view/patient_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,6 +32,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     GlobalKey<NavigatorState>(),
     GlobalKey<NavigatorState>(),
     GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
   ];
 
   // Screens to display in the dashboard
@@ -40,6 +42,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     const AppointmentsScreen(),
     const Center(child: Text('Payments', style: TextStyle(fontSize: 24))),
     const Center(child: Text('Messages', style: TextStyle(fontSize: 24))),
+    const SettingsScreen()
   ];
 
   @override
@@ -105,6 +108,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           icon: Icon(Icons.message_outlined),
           selectedIcon: Icon(Icons.message),
           label: Text('Messages'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.settings_outlined),
+          selectedIcon: Icon(Icons.settings),
+          label: Text('Settings'),
         ),
       ],
       selectedIndex: selectedIndex,

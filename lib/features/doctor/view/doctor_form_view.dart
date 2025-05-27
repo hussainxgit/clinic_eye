@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:clinic_eye/core/locale/l10n/app_localizations.dart';
 import '../model/doctor.dart';
 import '../provider/doctor_provider.dart';
 
@@ -15,8 +16,10 @@ class AddDoctorFormView extends ConsumerWidget {
     final TextEditingController contactNumberController =
         TextEditingController();
     final TextEditingController emailController = TextEditingController();
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
-      appBar: AppBar(title: Text('Add New Doctor')),
+      appBar: AppBar(title: Text(l10n.addPatient)), // Assuming 'Add New Doctor' can be mapped to 'Add Patient' or a new key `addDoctor`
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -25,24 +28,24 @@ class AddDoctorFormView extends ConsumerWidget {
             spacing: 16.0,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Fill in the details below to add a new doctor.'),
+              Text(l10n.patientMedicalHistory), // Assuming a generic message, or create a new key like `fillDoctorDetails`
               const Divider(),
               const SizedBox(height: 16.0),
               TextFormField(
                 controller: nameController,
-                decoration: InputDecoration(labelText: 'Doctor Name'),
+                decoration: InputDecoration(labelText: l10n.doctorName),
               ),
               TextFormField(
                 controller: specializationController,
-                decoration: InputDecoration(labelText: 'Specialization'),
+                decoration: InputDecoration(labelText: l10n.doctorSpecialty),
               ),
               TextFormField(
                 controller: contactNumberController,
-                decoration: InputDecoration(labelText: 'Contact Number'),
+                decoration: InputDecoration(labelText: l10n.clinicPhoneNumber), // Assuming 'Contact Number' maps to this
               ),
               TextFormField(
                 controller: emailController,
-                decoration: InputDecoration(labelText: 'Email Address'),
+                decoration: InputDecoration(labelText: l10n.email),
               ),
               ElevatedButton(
                 onPressed: () async {
@@ -64,13 +67,13 @@ class AddDoctorFormView extends ConsumerWidget {
                         getAllDoctorsProvider,
                       ); // Refresh the doctors list
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Doctor added successfully')),
+                        SnackBar(content: Text(l10n.success)), // Or a more specific message like `doctorAddedSuccessfully`
                       );
                     } else {
                       // Error handling
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Error: ${result.errorMessage}'),
+                          content: Text('${l10n.error}: ${result.errorMessage}'),
                         ),
                       );
                     }
@@ -78,7 +81,7 @@ class AddDoctorFormView extends ConsumerWidget {
                     formKey.currentState?.reset();
                   }
                 },
-                child: const Text('Add Doctor'),
+                child: Text(l10n.add),
               ),
             ],
           ),
@@ -107,9 +110,10 @@ class EditDoctorFormView extends ConsumerWidget {
     final TextEditingController emailController = TextEditingController(
       text: doctor.email,
     );
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Edit Doctor Details')),
+      appBar: AppBar(title: Text(l10n.editPatient)), // Assuming 'Edit Doctor Details' can be mapped to 'Edit Patient' or a new key `editDoctor`
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -118,24 +122,24 @@ class EditDoctorFormView extends ConsumerWidget {
             spacing: 16.0,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Update the details below and save changes.'),
+              Text(l10n.notes), // Assuming a generic message or create a new key like `updateDoctorDetails`
               Divider(),
               const SizedBox(height: 16.0),
               TextFormField(
                 controller: nameController,
-                decoration: InputDecoration(labelText: 'Doctor Name'),
+                decoration: InputDecoration(labelText: l10n.doctorName),
               ),
               TextFormField(
                 controller: specializationController,
-                decoration: InputDecoration(labelText: 'Specialization'),
+                decoration: InputDecoration(labelText: l10n.doctorSpecialty),
               ),
               TextFormField(
                 controller: contactNumberController,
-                decoration: InputDecoration(labelText: 'Contact Number'),
+                decoration: InputDecoration(labelText: l10n.clinicPhoneNumber), // Assuming 'Contact Number' maps to this
               ),
               TextFormField(
                 controller: emailController,
-                decoration: InputDecoration(labelText: 'Email Address'),
+                decoration: InputDecoration(labelText: l10n.email),
               ),
               ElevatedButton(
                 onPressed: () async {
@@ -156,19 +160,19 @@ class EditDoctorFormView extends ConsumerWidget {
                         getAllDoctorsProvider,
                       ); // Refresh the doctors list
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Doctor updated successfully')),
+                        SnackBar(content: Text(l10n.success)), // Or a more specific message like `doctorUpdatedSuccessfully`
                       );
                     } else {
                       // Error handling
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Error: ${result.errorMessage}'),
+                          content: Text('${l10n.error}: ${result.errorMessage}'),
                         ),
                       );
                     }
                   }
                 },
-                child: const Text('Save Changes'),
+                child: Text(l10n.save),
               ),
             ],
           ),
