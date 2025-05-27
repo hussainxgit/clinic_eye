@@ -40,7 +40,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         return supportedLocales.first; // Default to English
       },
       debugShowCheckedModeBanner: false,
-      title: 'Eye Clinic',
+      onGenerateTitle: (BuildContext context) {
+        return AppLocalizations.of(context)!.appName;
+      },
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
@@ -49,8 +51,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           ref.read(themeModeProvider.notifier).state = !isDarkMode;
         },
         isDarkMode: isDarkMode,
-        // You might want to pass a function to change the locale to DashboardScreen
-        // or access the provider directly from where you want to change the language
       ),
     );
   }

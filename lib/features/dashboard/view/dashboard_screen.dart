@@ -1,3 +1,4 @@
+import 'package:clinic_eye/core/locale/l10n/app_localizations.dart';
 import 'package:clinic_eye/core/views/screens/settings_screen.dart';
 import 'package:clinic_eye/features/patient/view/patient_screen.dart';
 import 'package:flutter/material.dart';
@@ -51,7 +52,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Clinic Eye'),
+        title: Text(AppLocalizations.of(context)!.appName),
         actions: [
           IconButton(
             icon: Icon(widget.isDarkMode ? Icons.light_mode : Icons.dark_mode),

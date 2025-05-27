@@ -25,3 +25,9 @@ Locale getCurrentLocale(WidgetRef ref) {
 void setLocale(WidgetRef ref, Locale locale) {
   ref.read(localeProvider.notifier).setLocale(locale);
 }
+
+// 5. Create a function to get the supported locales
+List<Locale> getSupportedLocales() {
+  return AppLocalizations.supportedLocales;
+}
+
