@@ -1,4 +1,5 @@
 import 'package:clinic_eye/core/config/dependencies.dart';
+import 'package:clinic_eye/core/locale/l10n/app_localizations.dart';
 import 'package:clinic_eye/core/views/widgets/common/confirm_dialog.dart';
 import 'package:clinic_eye/features/appointment/view/appointment_form_view.dart';
 import 'package:flutter/material.dart';
@@ -87,7 +88,7 @@ class AppointmentListWithFilter extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Appointments List (${filteredAppointments.length})',
+              '${AppLocalizations.of(context)!.appointmentList} (${filteredAppointments.length})',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             Row(

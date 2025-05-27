@@ -597,4 +597,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get noAppointments => 'لا توجد مواعيد';
+
+  @override
+  String get appointmentList => 'قائمة المواعيد';
+
+  @override
+  String get patientList => 'قائمة المرضى';
 }

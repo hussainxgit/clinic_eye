@@ -1273,6 +1273,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No appointments found'**
   String get noAppointments;
+
+  /// No description provided for @appointmentList.
+  ///
+  /// In en, this message translates to:
+  /// **'Appointment List'**
+  String get appointmentList;
+
+  /// No description provided for @patientList.
+  ///
+  /// In en, this message translates to:
+  /// **'Patient List'**
+  String get patientList;
 }
 
 class _AppLocalizationsDelegate

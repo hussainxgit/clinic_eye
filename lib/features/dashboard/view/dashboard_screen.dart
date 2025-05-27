@@ -37,22 +37,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   ];
 
   // Screens to display in the dashboard
-  final List<Widget> _screens = [
-    const DoctorsScreen(),
-    const PatientsScreen(),
-    const AppointmentsScreen(),
-    const Center(child: Text('Payments', style: TextStyle(fontSize: 24))),
-    const Center(child: Text('Messages', style: TextStyle(fontSize: 24))),
-    const SettingsScreen()
-  ];
+  List<Widget> _getScreens(AppLocalizations l10n) {
+    return [
+      const AppointmentsScreen(),
+      const DoctorsScreen(),
+      const PatientsScreen(),
+      Center(child: Text(l10n.payments, style: const TextStyle(fontSize: 24))),
+      Center(child: Text(l10n.messages, style: const TextStyle(fontSize: 24))),
+      const SettingsScreen(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     final selectedIndex = ref.watch(selectedNavIndexProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.appName),
+        title: Text(l10n.appName),
         actions: [
           IconButton(
             icon: Icon(widget.isDarkMode ? Icons.light_mode : Icons.dark_mode),
@@ -62,11 +65,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
       body: Row(
         children: [
-          _buildNavigationRail(selectedIndex),
+          _buildNavigationRail(selectedIndex, l10n),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
-              child: _buildNavigator(selectedIndex),
+              child: _buildNavigator(selectedIndex, l10n),
             ),
           ),
         ],
@@ -74,7 +77,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildNavigationRail(int selectedIndex) {
+  Widget _buildNavigationRail(int selectedIndex, AppLocalizations l10n) {
     return NavigationRail(
       extended: _isExtended,
       minExtendedWidth: 200,
@@ -84,36 +87,36 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         color: Theme.of(context).colorScheme.onPrimary,
         onPressed: () => setState(() => _isExtended = !_isExtended),
       ),
-      destinations: const [
+      destinations: [
         NavigationRailDestination(
-          icon: Icon(Icons.people_outline),
-          selectedIcon: Icon(Icons.people),
-          label: Text('Doctors'),
+          icon: const Icon(Icons.calendar_today_outlined),
+          selectedIcon: const Icon(Icons.calendar_today),
+          label: Text(l10n.appointments),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.person_outline),
-          selectedIcon: Icon(Icons.person),
-          label: Text('Patients'),
+          icon: const Icon(Icons.people_outline),
+          selectedIcon: const Icon(Icons.people),
+          label: Text(l10n.doctors),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.calendar_today_outlined),
-          selectedIcon: Icon(Icons.calendar_today),
-          label: Text('Appointments'),
+          icon: const Icon(Icons.person_outline),
+          selectedIcon: const Icon(Icons.person),
+          label: Text(l10n.patients),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.payments_outlined),
-          selectedIcon: Icon(Icons.payments),
-          label: Text('Payments'),
+          icon: const Icon(Icons.payments_outlined),
+          selectedIcon: const Icon(Icons.payments),
+          label: Text(l10n.payments),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.message_outlined),
-          selectedIcon: Icon(Icons.message),
-          label: Text('Messages'),
+          icon: const Icon(Icons.message_outlined),
+          selectedIcon: const Icon(Icons.message),
+          label: Text(l10n.messages),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.settings_outlined),
-          selectedIcon: Icon(Icons.settings),
-          label: Text('Settings'),
+          icon: const Icon(Icons.settings_outlined),
+          selectedIcon: const Icon(Icons.settings),
+          label: Text(l10n.settings),
         ),
       ],
       selectedIndex: selectedIndex,
@@ -124,12 +127,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   // Build a Navigator for the selected screen
-  Widget _buildNavigator(int selectedIndex) {
+  Widget _buildNavigator(int selectedIndex, AppLocalizations l10n) {
+    final screens = _getScreens(l10n);
     return Navigator(
       key: _navigatorKeys[selectedIndex],
       onGenerateRoute: (settings) {
         return MaterialPageRoute(
-          builder: (context) => _screens[selectedIndex],
+          builder: (context) => screens[selectedIndex],
           settings: settings,
         );
       },

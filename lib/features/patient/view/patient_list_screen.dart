@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/locale/l10n/app_localizations.dart';
 import '../../../core/views/widgets/common/generic_filter_dialog.dart';
 import '../model/patient.dart';
 import '../provider/patient_provider.dart';
@@ -63,7 +64,7 @@ class PatientListWithFilter extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Patients List (${filteredPatients.length})',
+              '${AppLocalizations.of(context)!.patientList} (${filteredPatients.length})',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             Row(

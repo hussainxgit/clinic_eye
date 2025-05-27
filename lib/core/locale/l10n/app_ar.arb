@@ -195,5 +195,7 @@
     "manageSlots": "إدارة الفترات",
     "paid": "مدفوع",
     "unpaid": "غير مدفوع",
-    "noAppointments": "لا توجد مواعيد"
+    "noAppointments": "لا توجد مواعيد",
+    "appointmentList": "قائمة المواعيد",
+    "patientList": "قائمة المرضى"
 }

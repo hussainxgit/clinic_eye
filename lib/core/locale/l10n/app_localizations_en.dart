@@ -600,4 +600,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noAppointments => 'No appointments found';
+
+  @override
+  String get appointmentList => 'Appointment List';
+
+  @override
+  String get patientList => 'Patient List';
 }

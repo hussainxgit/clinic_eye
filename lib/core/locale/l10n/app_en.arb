@@ -195,5 +195,7 @@
     "manageSlots": "Manage Slots",
     "paid": "Paid",
     "unpaid": "Unpaid",
-    "noAppointments": "No appointments found"
+    "noAppointments": "No appointments found",
+    "appointmentList": "Appointment List",
+    "patientList": "Patient List"
 }
